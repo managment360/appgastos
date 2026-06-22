@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dividir Gastos 🧾
 
-## Getting Started
+App **mobile-first** para dividir gastos de grupos (viajes, asados, cumpleaños,
+eventos). Inspirada en Splitwise y Splid. **Sin login**: cada grupo se comparte
+por un código/link único.
 
-First, run the development server:
+- **Next.js 16** (App Router) + TypeScript
+- **Tailwind CSS** + **shadcn/ui** (base-ui)
+- **PostgreSQL** (Supabase) con **Drizzle ORM** (driver `postgres`/postgres-js)
+- Lógica de cálculo (división + liquidación) en **funciones puras testeadas**
+- Export del reporte a **PDF / imagen** y resumen para **WhatsApp**
+
+---
+
+## Correr en local
+
+Requisitos: **Node 20+** y una base **Postgres** (lo más simple: un proyecto
+gratis en [Supabase](https://supabase.com)).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local      # completá DATABASE_URL y DIRECT_URL
+npm run db:migrate              # crea las tablas
+npm run db:seed                 # carga el grupo demo "Asado Mariano" (código ASADO1)
+npm run dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Variables de entorno (`.env.local`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Qué es | Dónde |
+|---|---|---|
+| `DATABASE_URL` | **Transaction pooler** (puerto 6543). La usa la app. | Supabase → Settings → Database → Connection string |
+| `DIRECT_URL` | **Session pooler** (puerto 5432). La usan las migraciones. | idem |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> El pooler de transacción no admite *prepared statements*; por eso el driver
+> usa `prepare: false` (ver [`src/db/index.ts`](src/db/index.ts)).
 
-## Learn More
+### Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Script | Acción |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run db:generate` | Genera SQL de migración desde el schema |
+| `npm run db:migrate` | Aplica migraciones a la base |
+| `npm run db:seed` | Carga el grupo demo |
+| `npm run db:studio` | Drizzle Studio (explorar la base) |
+| `npm test` | Tests de las funciones de cálculo |
+| `npm run build` | Build de producción |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Estructura
 
-## Deploy on Vercel
+```
+src/
+├─ app/
+│  ├─ page.tsx              # Entrada: grupos recientes + crear/unirse
+│  ├─ g/[code]/             # Grupo (gastos, saldos, saldar, reporte, miembros)
+│  ├─ actions/              # Server actions (groups, members, expenses, settlements)
+│  └─ api/ping/             # Keep-alive de Supabase (cron de Vercel)
+├─ db/
+│  ├─ index.ts              # ⭐ ÚNICO módulo de conexión a la base
+│  ├─ schema.ts             # Schema Drizzle (Postgres)
+│  ├─ queries.ts            # Lecturas
+│  ├─ migrate.ts            # Runner de migraciones
+│  └─ seed.ts               # Grupo demo "Asado Mariano"
+├─ lib/                     # money, split, settle, balances, report (PUROS + testeados)
+└─ components/              # UI (sheets, cards, nav, reporte, export)
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+La conexión a la base está **aislada en [`src/db/index.ts`](src/db/index.ts)**:
+cambiar de proveedor de Postgres es tocar solo ese archivo + las variables de entorno.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Deploy en producción (Supabase + Vercel)
+
+1. **Supabase**: creá un proyecto, copiá las dos connection strings (transaction
+   6543 y session 5432) a las *Environment Variables* de Vercel como
+   `DATABASE_URL` y `DIRECT_URL`.
+2. **Migraciones**: corré `npm run db:migrate` (y `npm run db:seed` si querés el demo)
+   apuntando a la base de producción.
+3. **Vercel**: importá el repo de GitHub. Next.js se detecta solo.
+4. El **cron** de [`vercel.json`](vercel.json) llama a `/api/ping` a diario para
+   que la base free de Supabase no se pause por inactividad.
+
+### Pendiente para más adelante (no implementado)
+- **Login** (Google/email) y roles: la estructura sin-cuenta está lista para sumarlo.
+- Conversión de monedas (el modelo ya soporta varias monedas).
