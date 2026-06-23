@@ -22,11 +22,7 @@ export default async function GroupLayout({
       <RememberGroup code={group.code} name={group.name} icon={group.icon} />
       <GroupTopbar group={group} memberCount={members.filter((m) => m.active).length} />
       <main className="flex-1 pb-28">{children}</main>
-      <BottomNav
-        code={group.code}
-        members={members.filter((m) => m.active)}
-        currency={group.currency}
-      />
+      <BottomNav code={group.code} />
     </div>
   );
 }

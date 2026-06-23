@@ -5,8 +5,8 @@ export const t = {
   appName: "Dividir Gastos",
   nav: {
     expenses: "Gastos",
-    balances: "Saldos",
-    settle: "Saldar",
+    balances: "Balances",
+    settle: "Liquidación",
     report: "Reporte",
   },
   common: {

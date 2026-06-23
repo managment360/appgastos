@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Receipt } from "lucide-react";
+import { Receipt, Plus } from "lucide-react";
+import { ExpenseSheet } from "./expense-sheet";
 import type { Group, Member } from "@/db/schema";
 import type { ExpenseWithDetails } from "@/db/queries";
 import type { MemberBalance } from "@/lib/balances";
@@ -114,6 +115,18 @@ export function ExpensesView({
           ))}
         </div>
       )}
+
+      {/* Botón Añadir gasto — solo en esta solapa */}
+      <ExpenseSheet
+        groupCode={group.code}
+        members={activeMembers}
+        currency={group.currency}
+        trigger={
+          <button className="no-print fixed bottom-[88px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[var(--color-gold)] px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-black/20 transition active:scale-95">
+            <Plus className="size-5" /> Añadir gasto
+          </button>
+        }
+      />
     </div>
   );
 }
@@ -125,9 +138,9 @@ function EmptyState() {
         🧾
       </div>
       <h3 className="text-lg font-semibold">Todavía no hay gastos</h3>
-      <p className="max-w-xs text-sm text-muted-foreground">
-        Tocá el botón <span className="font-semibold text-primary">+</span> de
-        abajo para cargar el primero. La app hace las cuentas.
+      <p className="max-w-xs text-base text-muted-foreground">
+        Tocá <span className="font-semibold text-gold">Añadir gasto</span> para
+        cargar el primero. La app hace las cuentas.
       </p>
       <Receipt className="size-5 text-muted-foreground" />
     </div>

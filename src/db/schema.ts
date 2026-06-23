@@ -24,6 +24,8 @@ export const groups = pgTable("groups", {
   description: text("description"),
   currency: text("currency").notNull().default("ARS"),
   status: text("status").$type<GroupStatus>().notNull().default("active"),
+  /** Pizarra/anotador del grupo (visible para todos). */
+  notes: text("notes"),
   createdAt: text("created_at").notNull(),
 });
 

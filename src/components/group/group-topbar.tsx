@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
 import type { Group } from "@/db/schema";
 import { ShareGroupSheet } from "./share-group-sheet";
+import { NotesSheet } from "./notes-sheet";
 
 export function GroupTopbar({
   group,
@@ -42,6 +43,7 @@ export function GroupTopbar({
         {memberCount}
       </Link>
 
+      <NotesSheet code={group.code} initialNotes={group.notes} />
       <ShareGroupSheet group={group} />
     </header>
   );

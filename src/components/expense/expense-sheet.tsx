@@ -21,6 +21,7 @@ import { CATEGORIES } from "@/lib/i18n";
 import { formatCents, parseToCents } from "@/lib/money";
 import { todayISO } from "@/lib/dates";
 import { DateField } from "@/components/ui/date-field";
+import { MoneyInput } from "@/components/ui/money-input";
 import { computeShares, validateSplit } from "@/lib/split";
 import {
   createExpense,
@@ -85,10 +86,9 @@ export function ExpenseSheet({
   const [multiPayer, setMultiPayer] = useState(
     (initial?.payers.length ?? 0) > 1
   );
+  // Vacío por defecto: obliga a elegir quién pagó (pedido del cliente).
   const [singlePayer, setSinglePayer] = useState<string>(
-    initial && initial.payers.length === 1
-      ? initial.payers[0].memberId
-      : members[0]?.id ?? ""
+    initial && initial.payers.length === 1 ? initial.payers[0].memberId : ""
   );
   const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {};
@@ -159,6 +159,7 @@ export function ExpenseSheet({
 
   function buildPayers(): { memberId: string; amount: number }[] {
     if (!multiPayer) {
+      if (!singlePayer) return [];
       return [{ memberId: singlePayer, amount: totalCents }];
     }
     return Object.entries(payerAmounts)
@@ -233,13 +234,12 @@ export function ExpenseSheet({
               <span className="text-2xl font-semibold text-muted-foreground">
                 $
               </span>
-              <input
-                inputMode="decimal"
+              <MoneyInput
                 placeholder="0"
                 value={amountStr}
-                onChange={(e) => setAmountStr(e.target.value)}
+                onChange={setAmountStr}
                 autoFocus={!initial}
-                className="w-48 bg-transparent text-center text-4xl font-bold tabular outline-none placeholder:text-muted-foreground/40"
+                className="w-52 bg-transparent text-center text-4xl font-bold outline-none placeholder:text-muted-foreground/40"
               />
             </div>
           </div>
@@ -317,17 +317,13 @@ export function ExpenseSheet({
                   <div key={m.id} className="flex items-center gap-2">
                     <span className="flex-1 text-sm">{m.name}</span>
                     <span className="text-sm text-muted-foreground">$</span>
-                    <Input
-                      inputMode="decimal"
+                    <MoneyInput
                       placeholder="0"
                       value={payerAmounts[m.id] ?? ""}
-                      onChange={(e) =>
-                        setPayerAmounts((prev) => ({
-                          ...prev,
-                          [m.id]: e.target.value,
-                        }))
+                      onChange={(v) =>
+                        setPayerAmounts((prev) => ({ ...prev, [m.id]: v }))
                       }
-                      className="h-9 w-28 text-right tabular"
+                      className="h-9 w-28 rounded-md border bg-transparent px-2 text-right"
                     />
                   </div>
                 ))}
@@ -414,14 +410,13 @@ export function ExpenseSheet({
                       </span>
                     )}
                     {on && splitType === "custom_amount" && (
-                      <Input
-                        inputMode="decimal"
+                      <MoneyInput
                         placeholder="0"
                         value={customAmt[m.id] ?? ""}
-                        onChange={(e) =>
-                          setCustomAmt((p) => ({ ...p, [m.id]: e.target.value }))
+                        onChange={(v) =>
+                          setCustomAmt((p) => ({ ...p, [m.id]: v }))
                         }
-                        className="h-8 w-24 text-right tabular"
+                        className="h-8 w-24 rounded-md border bg-transparent px-2 text-right"
                       />
                     )}
                     {on && splitType === "percent" && (

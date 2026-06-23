@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Plus, LogIn, Receipt } from "lucide-react";
-import { getRecentGroups, type RecentGroup } from "@/lib/recent-groups";
+import { ChevronRight, Plus, LogIn, Receipt, X } from "lucide-react";
+import {
+  getRecentGroups,
+  forgetGroup,
+  type RecentGroup,
+} from "@/lib/recent-groups";
 import { t } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { CreateGroupSheet } from "./create-group-sheet";
@@ -17,17 +21,26 @@ export function HomeClient() {
     setRecent(getRecentGroups());
   }, []);
 
+  function forget(code: string) {
+    forgetGroup(code);
+    setRecent((prev) => prev.filter((g) => g.code !== code));
+  }
+
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-12 pb-10">
-      {/* Encabezado */}
-      <div className="mb-8 flex flex-col items-center text-center">
-        <div className="mb-3 flex size-16 items-center justify-center rounded-2xl bg-pos-soft text-3xl shadow-sm">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-8 pb-10">
+      {/* Encabezado compacto */}
+      <div className="mb-7 flex items-center gap-3">
+        <div className="flex size-11 items-center justify-center rounded-xl bg-[var(--color-navy)] text-xl text-white">
           🧾
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">{t.appName}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Viajes, asados, eventos. La app hace las cuentas.
-        </p>
+        <div>
+          <h1 className="text-xl font-bold leading-tight tracking-tight">
+            {t.appName}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            La app hace las cuentas.
+          </p>
+        </div>
       </div>
 
       {/* Grupos recientes */}
@@ -43,23 +56,33 @@ export function HomeClient() {
         ) : (
           <ul className="flex flex-col gap-2">
             {recent.map((g) => (
-              <li key={g.code}>
+              <li
+                key={g.code}
+                className="relative flex items-center rounded-2xl border bg-card shadow-sm"
+              >
                 <button
                   onClick={() => router.push(`/g/${g.code}`)}
-                  className="flex w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left shadow-sm transition active:scale-[0.99]"
+                  className="flex flex-1 items-center gap-3 px-4 py-3.5 text-left transition active:scale-[0.99]"
                 >
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-muted text-xl">
+                  <span className="flex size-11 items-center justify-center rounded-xl bg-sky text-xl">
                     {g.icon}
                   </span>
                   <span className="flex-1">
-                    <span className="block font-semibold leading-tight">
+                    <span className="block text-base font-semibold leading-tight">
                       {g.name}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      {g.code}
+                      Código {g.code}
                     </span>
                   </span>
                   <ChevronRight className="size-5 text-muted-foreground" />
+                </button>
+                <button
+                  onClick={() => forget(g.code)}
+                  aria-label="Quitar de la lista"
+                  className="mr-2 flex size-8 items-center justify-center rounded-full text-muted-foreground transition active:bg-muted"
+                >
+                  <X className="size-4" />
                 </button>
               </li>
             ))}

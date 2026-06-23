@@ -3,27 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Copy, Check, PartyPopper, RotateCcw } from "lucide-react";
+import { ArrowRight, Copy, Check, PartyPopper, MessageCircle } from "lucide-react";
 import type { Group, Member, Settlement } from "@/db/schema";
 import type { Transfer } from "@/lib/settle";
 import { formatMoney } from "@/lib/money";
-import { copyToClipboard } from "@/lib/share";
+import { copyToClipboard, whatsappLink } from "@/lib/share";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  markTransferPaid,
-  unmarkTransfer,
-  setGroupStatus,
-} from "@/app/actions/settlements";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
+import { markTransferPaid, unmarkTransfer } from "@/app/actions/settlements";
 
 export function SettleView({
   group,
@@ -78,14 +65,41 @@ export function SettleView({
     toast[ok ? "success" : "error"](ok ? "¡Alias copiado!" : "No se pudo copiar.");
   }
 
+  function sendWhatsApp() {
+    const lines = [`💸 ${group.name} — Liquidación`, ""];
+    for (const t of pending) {
+      const alias = memberOf(t.toMemberId)?.aliasCbu;
+      lines.push(
+        `• ${nameOf(t.fromMemberId)} → ${nameOf(t.toMemberId)}: ${formatMoney(
+          t.amount,
+          group.currency
+        )}${alias ? ` (${alias})` : ""}`
+      );
+    }
+    window.open(whatsappLink(lines.join("\n")), "_blank");
+  }
+
   const allSettled = pending.length === 0;
 
   return (
-    <div className="flex flex-col px-4 py-4">
-      <h2 className="mb-1 px-1 text-lg font-bold">Saldar</h2>
-      <p className="mb-4 px-1 text-sm text-muted-foreground">
-        Mínimo de transferencias para quedar a mano.
-      </p>
+    <div className="flex flex-col gap-3 px-4 py-4">
+      {/* Leyenda */}
+      <div className="rounded-2xl border border-[var(--color-gold)]/40 bg-[var(--color-gold-soft)] px-4 py-3 text-[var(--color-navy)]">
+        <p className="font-bold">Cuentas claras conservan la amistad 🤝</p>
+        <p className="text-sm">Reintegremos a quienes pagaron los gastos.</p>
+      </div>
+
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-lg font-bold">Liquidación</h2>
+        {!allSettled && (
+          <button
+            onClick={sendWhatsApp}
+            className="flex items-center gap-1 text-sm font-semibold text-gold"
+          >
+            <MessageCircle className="size-4" /> Enviar
+          </button>
+        )}
+      </div>
 
       {/* Pendientes */}
       {allSettled ? (
@@ -97,45 +111,49 @@ export function SettleView({
           </p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3">
           {pending.map((t) => {
             const key = `${t.fromMemberId}-${t.toMemberId}`;
             const to = memberOf(t.toMemberId);
             return (
               <li
                 key={key}
-                className="rounded-2xl border bg-card px-4 py-3 shadow-sm"
+                className="overflow-hidden rounded-2xl border bg-card shadow-sm"
               >
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{nameOf(t.fromMemberId)}</span>
+                {/* Fila 1: quiénes + importe */}
+                <div className="flex items-center gap-2 px-4 pt-3.5">
+                  <span className="text-base font-bold">
+                    {nameOf(t.fromMemberId)}
+                  </span>
                   <ArrowRight className="size-4 text-muted-foreground" />
-                  <span className="font-semibold">{nameOf(t.toMemberId)}</span>
-                  <span className="ml-auto text-lg font-bold tabular text-neg">
+                  <span className="text-base font-bold">
+                    {nameOf(t.toMemberId)}
+                  </span>
+                  <span className="ml-auto text-xl font-extrabold tabular text-neg">
                     {formatMoney(t.amount, group.currency)}
                   </span>
                 </div>
-
-                <div className="mt-2 flex items-center gap-2">
+                {/* Fila 2: alias + acción */}
+                <div className="flex items-center gap-2 px-4 pb-3.5 pt-2.5">
                   {to?.aliasCbu ? (
                     <button
                       onClick={() => copyAlias(to.aliasCbu)}
-                      className="flex items-center gap-1 rounded-lg bg-muted px-2.5 py-1 text-xs font-medium"
+                      className="flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1.5 text-sm font-medium"
                     >
                       <Copy className="size-3.5" />
                       {to.aliasCbu}
                     </button>
                   ) : (
-                    <span className="text-xs text-muted-foreground">
-                      Sin alias de {to?.name}
+                    <span className="text-sm text-muted-foreground">
+                      {to?.name} sin alias
                     </span>
                   )}
                   <Button
-                    size="sm"
-                    className="ml-auto h-8 gap-1"
+                    className="ml-auto h-10 gap-1.5 bg-[var(--color-neg)] px-4 text-white hover:opacity-90"
                     disabled={busy === key}
                     onClick={() => pay(t)}
                   >
-                    <Check className="size-4" /> Pagada
+                    Registrar Pago
                   </Button>
                 </div>
               </li>
@@ -146,90 +164,38 @@ export function SettleView({
 
       {/* Saldadas */}
       {paid.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-3">
           <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Saldadas
+            Pagos cancelados
           </h3>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-3">
             {paid.map((s) => (
               <li
                 key={s.id}
-                className="flex items-center gap-2 rounded-2xl border bg-muted/40 px-4 py-2.5"
+                className="overflow-hidden rounded-2xl border bg-card shadow-sm"
               >
-                <Check className="size-4 text-pos" />
-                <span className="text-sm">
-                  {nameOf(s.fromMemberId)} → {nameOf(s.toMemberId)}
-                </span>
-                <span className="ml-auto text-sm font-medium tabular text-muted-foreground line-through">
-                  {formatMoney(s.amount, group.currency)}
-                </span>
-                <button
-                  onClick={() => undo(s)}
-                  disabled={busy === s.id}
-                  className="text-muted-foreground"
-                  aria-label="Deshacer"
-                >
-                  <RotateCcw className="size-4" />
-                </button>
+                <div className="flex items-center gap-2 px-4 pt-3.5">
+                  <span className="font-bold">{nameOf(s.fromMemberId)}</span>
+                  <ArrowRight className="size-4 text-muted-foreground" />
+                  <span className="font-bold">{nameOf(s.toMemberId)}</span>
+                  <span className="ml-auto text-lg font-bold tabular text-muted-foreground line-through">
+                    {formatMoney(s.amount, group.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-end px-4 pb-3.5 pt-2.5">
+                  <Button
+                    className="h-10 gap-1.5 bg-[var(--color-pos)] px-4 text-white hover:opacity-90"
+                    disabled={busy === s.id}
+                    onClick={() => undo(s)}
+                  >
+                    <Check className="size-4" /> Cancelado
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
         </div>
       )}
-
-      {/* Cerrar / reabrir grupo */}
-      <div className="mt-8">
-        {group.status === "active" ? (
-          <Dialog>
-            <DialogTrigger
-              render={
-                <Button variant="outline" className="h-11 w-full">
-                  Cerrar grupo
-                </Button>
-              }
-            />
-            <DialogContent className="max-w-xs rounded-2xl">
-              <DialogHeader>
-                <DialogTitle>¿Cerrar grupo?</DialogTitle>
-              </DialogHeader>
-              <p className="text-sm text-muted-foreground">
-                Marca el grupo como cerrado. Podés reabrirlo cuando quieras.
-              </p>
-              <DialogFooter className="flex-row justify-end gap-2">
-                <DialogClose render={<Button variant="outline">Cancelar</Button>} />
-                <DialogClose
-                  render={
-                    <Button
-                      onClick={async () => {
-                        await setGroupStatus({
-                          groupCode: group.code,
-                          status: "closed",
-                        });
-                        toast.success("Grupo cerrado");
-                        router.refresh();
-                      }}
-                    >
-                      Cerrar grupo
-                    </Button>
-                  }
-                />
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        ) : (
-          <Button
-            variant="outline"
-            className="h-11 w-full"
-            onClick={async () => {
-              await setGroupStatus({ groupCode: group.code, status: "active" });
-              toast.success("Grupo reabierto");
-              router.refresh();
-            }}
-          >
-            Reabrir grupo
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

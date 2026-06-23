@@ -64,6 +64,21 @@ const updateSchema = z.object({
   description: z.string().trim().max(200).optional(),
 });
 
+const notesSchema = z.object({
+  groupCode: z.string(),
+  notes: z.string().max(4000),
+});
+
+export async function updateGroupNotes(input: z.input<typeof notesSchema>) {
+  const data = notesSchema.parse(input);
+  await db
+    .update(groups)
+    .set({ notes: data.notes })
+    .where(eq(groups.code, data.groupCode));
+  revalidatePath(`/g/${data.groupCode}`);
+  return { ok: true };
+}
+
 export async function updateGroup(input: z.input<typeof updateSchema>) {
   const data = updateSchema.parse(input);
   const [g] = await db

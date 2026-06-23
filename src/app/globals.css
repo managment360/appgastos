@@ -51,45 +51,58 @@
   --color-pos-soft: var(--pos-soft);
   --color-neg: var(--neg);
   --color-neg-soft: var(--neg-soft);
+  /* Identidad de marca (Divididos): navy / dorado / celeste */
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-sky: var(--sky);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --pos: oklch(0.56 0.13 152);
-  --pos-soft: oklch(0.95 0.04 152);
-  --neg: oklch(0.58 0.20 25);
-  --neg-soft: oklch(0.95 0.04 25);
+  /* Paleta "Divididos": navy #15253f, dorado #bd9060, celeste #c7dcef */
+  --navy: #15253f;
+  --navy-soft: #22375c;
+  --gold: #bd9060;
+  --gold-soft: #f3e9dd;
+  --sky: #c7dcef;
+
+  --background: #f4f7fb;
+  --foreground: #15253f;
+  --card: #ffffff;
+  --card-foreground: #15253f;
+  --popover: #ffffff;
+  --popover-foreground: #15253f;
+  --primary: #15253f;
+  --primary-foreground: #ffffff;
+  --secondary: #eef3f9;
+  --secondary-foreground: #15253f;
+  --muted: #eef3f9;
+  --muted-foreground: #5f718c;
+  --accent: #f3e9dd;
+  --accent-foreground: #15253f;
+  --destructive: #c0392b;
+  --border: #e2e9f2;
+  --input: #e2e9f2;
+  --ring: #bd9060;
+  --chart-1: #15253f;
+  --chart-2: #bd9060;
+  --chart-3: #5f718c;
+  --chart-4: #c7dcef;
+  --chart-5: #22375c;
+  --radius: 0.875rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #15253f;
+  --sidebar-primary: #15253f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3e9dd;
+  --sidebar-accent-foreground: #15253f;
+  --sidebar-border: #e2e9f2;
+  --sidebar-ring: #bd9060;
+  --pos: #1f8a4c;
+  --pos-soft: #e6f5ec;
+  --neg: #c0392b;
+  --neg-soft: #fbe9e7;
 }
 
 .dark {
@@ -139,6 +152,8 @@
   }
   html {
     @apply font-sans;
+    /* Base un poco más grande para lectura cómoda (usuarios 40+). */
+    font-size: 17px;
   }
 }
 
@@ -148,8 +163,29 @@
   .text-neg { color: var(--color-neg); }
   .bg-pos-soft { background-color: var(--color-pos-soft); }
   .bg-neg-soft { background-color: var(--color-neg-soft); }
+  /* Marca */
+  .text-gold { color: var(--color-gold); }
+  .bg-navy { background-color: var(--color-navy); }
+  .bg-gold { background-color: var(--color-gold); }
+  .bg-sky { background-color: var(--color-sky); }
   /* Tipografía de montos (tabular para alinear) */
   .tabular { font-variant-numeric: tabular-nums; }
   /* Respeta el safe-area inferior del celu (notch / barra gestos) */
   .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+}
+
+/* ====== Impresión del reporte (PDF A4 nítido, márgenes mínimos) ====== */
+@media print {
+  body { background: #fff; }
+  body * { visibility: hidden; }
+  #reporte-print, #reporte-print * { visibility: visible; }
+  #reporte-print {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+  .no-print { display: none !important; }
+  @page { size: A4 landscape; margin: 8mm; }
 }

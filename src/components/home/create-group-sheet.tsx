@@ -24,7 +24,6 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState<string>(GROUP_ICONS[0]);
-  const [description, setDescription] = useState("");
   const [memberInput, setMemberInput] = useState("");
   const [memberNames, setMemberNames] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -50,7 +49,6 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
       const res = await createGroup({
         name,
         icon,
-        description,
         currency: "ARS",
         memberNames,
       });
@@ -106,17 +104,6 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
-            />
-          </div>
-
-          {/* Descripción */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="g-desc">Descripción (opcional)</Label>
-            <Input
-              id="g-desc"
-              placeholder="Una nota corta"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 

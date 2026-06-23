@@ -292,6 +292,9 @@ function MemberSheet({
               value={aliasCbu}
               onChange={(e) => setAliasCbu(e.target.value)}
               placeholder="ej. juan.mp"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </Field>
           <div className="grid grid-cols-2 gap-3">
