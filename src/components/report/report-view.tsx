@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { toPng } from "html-to-image";
 import { FileText, ImageDown, MessageCircle } from "lucide-react";
 import type { Group, Member } from "@/db/schema";
 import type { ReportModel } from "@/lib/report";
@@ -31,6 +30,8 @@ export function ReportView({
     if (!node) return;
     setExporting(true);
     try {
+      // Carga diferida: el exportador solo se baja al usarlo (aligera la pestaña).
+      const { toPng } = await import("html-to-image");
       const url = await toPng(node, { backgroundColor: "#ffffff", pixelRatio: 2 });
       const a = document.createElement("a");
       a.href = url;
@@ -71,7 +72,7 @@ export function ReportView({
   }
 
   return (
-    <div className="flex flex-col px-4 py-4">
+    <div className="flex min-w-0 flex-col px-4 py-4">
       <div className="no-print mb-3 flex items-center justify-between px-1">
         <h2 className="text-lg font-bold">Reporte</h2>
       </div>
@@ -106,7 +107,7 @@ export function ReportView({
       </div>
 
       {/* Tabla (scroll horizontal en pantalla; objetivo de impresión/captura) */}
-      <div className="overflow-x-auto rounded-2xl border bg-white shadow-sm">
+      <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-2xl border bg-white shadow-sm">
         <ReportTable
           report={report}
           groupName={group.name}
