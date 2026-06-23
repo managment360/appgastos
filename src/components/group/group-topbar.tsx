@@ -6,6 +6,7 @@ import { ArrowLeft, Users } from "lucide-react";
 import type { Group, Member, Note } from "@/db/schema";
 import { ShareGroupSheet } from "./share-group-sheet";
 import { NotesSheet } from "./notes-sheet";
+import { GroupSwitcher } from "./group-switcher";
 
 export function GroupTopbar({
   group,
@@ -29,14 +30,8 @@ export function GroupTopbar({
         <ArrowLeft className="size-5" />
       </button>
 
-      <div className="flex flex-1 items-center gap-2.5 overflow-hidden">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-lg">
-          {group.icon}
-        </span>
-        <div className="overflow-hidden">
-          <h1 className="truncate font-semibold leading-tight">{group.name}</h1>
-          <p className="text-xs text-muted-foreground">Código {group.code}</p>
-        </div>
+      <div className="flex min-w-0 flex-1 items-center">
+        <GroupSwitcher group={group} />
       </div>
 
       <Link
