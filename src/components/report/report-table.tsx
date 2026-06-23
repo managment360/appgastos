@@ -14,7 +14,8 @@ const SKY = "#c7dcef";
 const GROUP = "#15253f"; // separador fuerte ENTRE miembros (navy)
 const MUTED = "#5f718c";
 const TINT = "#eef3f9"; // fondo claro de cada celda de monto
-const WHITE = "#ffffff"; // líneas blancas que dividen cada monto
+const WHITE = "#ffffff"; // líneas blancas (solo en la fila navy "Gasto Total")
+const DARK = "#1a2740"; // líneas oscuras que dividen cada monto en el cuerpo
 
 export function ReportTable({
   report,
@@ -42,9 +43,10 @@ export function ReportTable({
   );
   const grandTotal = rows.reduce((a, r) => a + r.amount, 0);
 
-  // Líneas blancas de 2px dividen cada celda; el separador entre miembros (navy,
-  // 3px) gana sobre la blanca al ser más grueso.
-  const border = `2px solid ${WHITE}`;
+  // Líneas oscuras dividen cada monto en el cuerpo; el separador entre miembros
+  // (navy, 3px) marca dónde empieza cada persona. La fila navy "Gasto Total"
+  // usa líneas blancas (override más abajo).
+  const border = `1px solid ${DARK}`;
   const groupBorder = `3px solid ${GROUP}`;
 
   const th: React.CSSProperties = {
@@ -188,10 +190,17 @@ export function ReportTable({
               />
             ))}
           </tr>
-          {/* Diferencia (Gasto Total) */}
+          {/* Diferencia (Gasto Total) — fila navy con líneas BLANCAS */}
           <tr>
             <td
-              style={{ ...foot, textAlign: "left", background: NAVY, color: "#fff" }}
+              style={{
+                ...foot,
+                textAlign: "left",
+                background: NAVY,
+                color: "#fff",
+                border: `2px solid ${WHITE}`,
+                borderTop: `3px solid ${NAVY}`,
+              }}
               colSpan={4}
             >
               Gasto Total
@@ -204,11 +213,13 @@ export function ReportTable({
                   colSpan={2}
                   style={{
                     ...foot,
-                    ...gl,
                     background: NAVY,
                     color: diff > 0 ? "#7ee2a6" : diff < 0 ? "#ff9b8f" : "#fff",
                     textAlign: "center",
                     fontWeight: 800,
+                    border: `2px solid ${WHITE}`,
+                    borderLeft: `3px solid ${WHITE}`,
+                    borderTop: `3px solid ${NAVY}`,
                   }}
                 >
                   {diff < 0 ? "-" : ""}
