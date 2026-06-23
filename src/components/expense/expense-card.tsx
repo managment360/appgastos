@@ -29,6 +29,7 @@ export function ExpenseCard({
   currency,
   groupCode,
   me,
+  canEdit = true,
 }: {
   expense: ExpenseWithDetails;
   members: Member[];
@@ -36,6 +37,7 @@ export function ExpenseCard({
   currency: string;
   groupCode: string;
   me: string | null;
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -86,6 +88,54 @@ export function ExpenseCard({
     }
   }
 
+  const cardInner = (
+    <>
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-xl">
+        {categoryIcon(expense.category)}
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate font-semibold leading-tight">
+          {expense.concept}
+        </span>
+        <span className="truncate text-xs text-muted-foreground">
+          pagó {payerNames}
+        </span>
+        {involved && (
+          <span
+            className={cn(
+              "text-xs font-medium",
+              myNet > 0
+                ? "text-pos"
+                : myNet < 0
+                  ? "text-neg"
+                  : "text-muted-foreground"
+            )}
+          >
+            {myNet > 0
+              ? `pagaste, te deben ${formatMoney(myNet, currency)}`
+              : myNet < 0
+                ? `te toca ${formatMoney(-myNet, currency)}`
+                : "estás a mano"}
+          </span>
+        )}
+        <span className="mt-0.5 text-sm font-bold tabular">
+          {formatMoney(expense.amount, currency)}
+        </span>
+      </span>
+    </>
+  );
+
+  // Solo lectura: card sin edición ni borrar.
+  if (!canEdit) {
+    return (
+      <li className="relative overflow-hidden rounded-2xl border bg-card shadow-sm">
+        <div className="flex w-full items-start gap-3 px-3 py-3">
+          {cardInner}
+        </div>
+      </li>
+    );
+  }
+
   return (
     <li className="relative overflow-hidden rounded-2xl border bg-card shadow-sm">
       {/* Cuerpo: abre edición */}
@@ -96,38 +146,7 @@ export function ExpenseCard({
         initial={initial}
         trigger={
           <button className="flex w-full items-start gap-3 py-3 pl-3 pr-12 text-left transition active:bg-muted/50">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-xl">
-              {categoryIcon(expense.category)}
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate font-semibold leading-tight">
-                {expense.concept}
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                pagó {payerNames}
-              </span>
-              {involved && (
-                <span
-                  className={cn(
-                    "text-xs font-medium",
-                    myNet > 0
-                      ? "text-pos"
-                      : myNet < 0
-                        ? "text-neg"
-                        : "text-muted-foreground"
-                  )}
-                >
-                  {myNet > 0
-                    ? `pagaste, te deben ${formatMoney(myNet, currency)}`
-                    : myNet < 0
-                      ? `te toca ${formatMoney(-myNet, currency)}`
-                      : "estás a mano"}
-                </span>
-              )}
-              <span className="mt-0.5 text-sm font-bold tabular">
-                {formatMoney(expense.amount, currency)}
-              </span>
-            </span>
+            {cardInner}
           </button>
         }
       />

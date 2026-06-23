@@ -13,8 +13,15 @@ const createSchema = z.object({
   icon: z.string().min(1).default("🧾"),
   description: z.string().trim().max(200).optional(),
   currency: z.string().min(1).default("ARS"),
-  /** Nombres de miembros iniciales (opcional). */
-  memberNames: z.array(z.string().trim().min(1)).default([]),
+  /** Miembros iniciales (opcional), con flag de administrador. */
+  members: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1),
+        isAdmin: z.boolean().optional(),
+      })
+    )
+    .default([]),
 });
 
 export type CreateGroupInput = z.input<typeof createSchema>;
@@ -41,10 +48,15 @@ export async function createGroup(input: CreateGroupInput) {
     createdAt: now,
   });
 
-  for (const name of data.memberNames) {
-    await db
-      .insert(members)
-      .values({ id: newId(), groupId, name, active: true, createdAt: now });
+  for (const m of data.members) {
+    await db.insert(members).values({
+      id: newId(),
+      groupId,
+      name: m.name,
+      active: true,
+      isAdmin: m.isAdmin ?? false,
+      createdAt: now,
+    });
   }
 
   return { code, name: data.name, icon: data.icon };

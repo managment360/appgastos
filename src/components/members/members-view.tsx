@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Copy, MoreVertical, UserX, UserCheck, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Copy,
+  MoreVertical,
+  UserX,
+  UserCheck,
+  Trash2,
+  Star,
+} from "lucide-react";
 import type { Group, Member } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +38,10 @@ import {
   addMember,
   updateMember,
   setMemberActive,
+  setMemberAdmin,
   deleteMember,
 } from "@/app/actions/members";
+import { useCanEdit } from "@/lib/current-member";
 
 export function MembersView({
   group,
@@ -44,19 +54,22 @@ export function MembersView({
 }) {
   const router = useRouter();
   const activitySet = new Set(memberIdsWithActivity);
+  const canEdit = useCanEdit(group.code, members);
 
   return (
     <div className="flex flex-col px-4 py-4">
       <div className="mb-4 flex items-center justify-between px-1">
         <h2 className="text-lg font-bold">Miembros</h2>
-        <MemberSheet
-          group={group}
-          trigger={
-            <Button size="sm" className="h-9 gap-1">
-              <Plus className="size-4" /> Agregar
-            </Button>
-          }
-        />
+        {canEdit && (
+          <MemberSheet
+            group={group}
+            trigger={
+              <Button size="sm" className="h-9 gap-1">
+                <Plus className="size-4" /> Agregar
+              </Button>
+            }
+          />
+        )}
       </div>
 
       <ul className="flex flex-col gap-2">
@@ -74,6 +87,11 @@ export function MembersView({
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 font-semibold leading-tight">
                 {m.name}
+                {m.isAdmin && (
+                  <span className="flex items-center gap-0.5 rounded-full bg-[var(--color-gold-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-gold)]">
+                    <Star className="size-3 fill-current" /> admin
+                  </span>
+                )}
                 {!m.active && (
                   <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                     inactivo
@@ -97,12 +115,14 @@ export function MembersView({
               )}
             </div>
 
-            <MemberMenu
-              group={group}
-              member={m}
-              hasActivity={activitySet.has(m.id)}
-              onChanged={() => router.refresh()}
-            />
+            {canEdit && (
+              <MemberMenu
+                group={group}
+                member={m}
+                hasActivity={activitySet.has(m.id)}
+                onChanged={() => router.refresh()}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -174,6 +194,23 @@ function MemberMenu({
                 <UserCheck className="size-4" /> Activar
               </>
             )}
+          </button>
+          <button
+            className="flex items-center gap-2 rounded-xl px-3 py-3 text-left transition active:bg-muted"
+            onClick={async () => {
+              await setMemberAdmin({
+                id: member.id,
+                groupCode: group.code,
+                isAdmin: !member.isAdmin,
+              });
+              toast.success(
+                member.isAdmin ? "Ya no es administrador" : "Ahora es administrador"
+              );
+              onChanged();
+            }}
+          >
+            <Star className="size-4" />
+            {member.isAdmin ? "Quitar administrador" : "Hacer administrador"}
           </button>
 
           {/* Eliminar (solo si no tiene movimientos) */}

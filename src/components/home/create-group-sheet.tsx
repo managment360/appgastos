@@ -3,7 +3,7 @@
 import { useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Star } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GROUP_ICONS } from "@/lib/i18n";
+import { CURRENCIES } from "@/lib/currencies";
 import { createGroup } from "@/app/actions/groups";
 import { rememberGroup } from "@/lib/recent-groups";
 import { cn } from "@/lib/utils";
@@ -24,19 +25,28 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState<string>(GROUP_ICONS[0]);
+  const [currency, setCurrency] = useState("ARS");
   const [memberInput, setMemberInput] = useState("");
-  const [memberNames, setMemberNames] = useState<string[]>([]);
+  const [memberList, setMemberList] = useState<
+    { name: string; isAdmin: boolean }[]
+  >([]);
   const [saving, setSaving] = useState(false);
 
   function addMember() {
     const n = memberInput.trim();
     if (!n) return;
-    if (memberNames.some((m) => m.toLowerCase() === n.toLowerCase())) {
+    if (memberList.some((m) => m.name.toLowerCase() === n.toLowerCase())) {
       toast.error("Ese miembro ya está.");
       return;
     }
-    setMemberNames((prev) => [...prev, n]);
+    setMemberList((prev) => [...prev, { name: n, isAdmin: false }]);
     setMemberInput("");
+  }
+
+  function toggleAdmin(name: string) {
+    setMemberList((prev) =>
+      prev.map((m) => (m.name === name ? { ...m, isAdmin: !m.isAdmin } : m))
+    );
   }
 
   async function handleSubmit() {
@@ -49,8 +59,8 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
       const res = await createGroup({
         name,
         icon,
-        currency: "ARS",
-        memberNames,
+        currency,
+        members: memberList,
       });
       rememberGroup({ code: res.code, name: res.name, icon: res.icon });
       toast.success(`Grupo creado: ${res.code}`);
@@ -107,9 +117,26 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
             />
           </div>
 
+          {/* Moneda */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="g-cur">Moneda</Label>
+            <select
+              id="g-cur"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="h-11 rounded-xl border bg-card px-3 text-base outline-none focus:border-[var(--color-gold)]"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.symbol} · {c.label} ({c.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Miembros iniciales */}
           <div className="flex flex-col gap-2">
-            <Label>Miembros (opcional, los sumás ahora o después)</Label>
+            <Label>Miembros (la ⭐ marca administrador)</Label>
             <div className="flex gap-2">
               <Input
                 placeholder="Nombre"
@@ -126,18 +153,34 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
                 <Plus className="size-4" />
               </Button>
             </div>
-            {memberNames.length > 0 && (
+            {memberList.length > 0 && (
               <ul className="flex flex-wrap gap-2 pt-1">
-                {memberNames.map((m) => (
+                {memberList.map((m) => (
                   <li
-                    key={m}
-                    className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm"
+                    key={m.name}
+                    className="flex items-center gap-1.5 rounded-full bg-muted py-1 pl-3 pr-1.5 text-sm"
                   >
-                    {m}
+                    <button
+                      type="button"
+                      onClick={() => toggleAdmin(m.name)}
+                      title="Marcar como administrador"
+                    >
+                      <Star
+                        className={cn(
+                          "size-4",
+                          m.isAdmin
+                            ? "fill-[var(--color-gold)] text-[var(--color-gold)]"
+                            : "text-muted-foreground"
+                        )}
+                      />
+                    </button>
+                    {m.name}
                     <button
                       type="button"
                       onClick={() =>
-                        setMemberNames((prev) => prev.filter((x) => x !== m))
+                        setMemberList((prev) =>
+                          prev.filter((x) => x.name !== m.name)
+                        )
                       }
                       className="text-muted-foreground"
                     >
@@ -147,10 +190,10 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
                 ))}
               </ul>
             )}
-          </div>
-
-          <div className="rounded-xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-            Moneda: <strong>ARS</strong> · Se generará un código para compartir.
+            <p className="text-xs text-muted-foreground">
+              Si no marcás ningún admin, todos pueden editar. Se genera un código
+              para compartir.
+            </p>
           </div>
 
           <Button

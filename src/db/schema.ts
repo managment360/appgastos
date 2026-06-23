@@ -40,6 +40,8 @@ export const members = pgTable("members", {
   aliasCbu: text("alias_cbu"),
   avatar: text("avatar"),
   active: boolean("active").notNull().default(true),
+  /** Administrador del grupo (puede editar). Sin login: rol "blando". */
+  isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: text("created_at").notNull(),
 });
 

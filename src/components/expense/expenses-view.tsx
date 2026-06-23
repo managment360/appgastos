@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Receipt, Plus } from "lucide-react";
 import { ExpenseSheet } from "./expense-sheet";
 import type { Group, Member } from "@/db/schema";
@@ -8,7 +8,11 @@ import type { ExpenseWithDetails } from "@/db/queries";
 import type { MemberBalance } from "@/lib/balances";
 import { formatMoney, formatSigned } from "@/lib/money";
 import { formatDateLong } from "@/lib/dates";
-import { getCurrentMember, setCurrentMember } from "@/lib/current-member";
+import {
+  setCurrentMember,
+  useCurrentMember,
+  useCanEdit,
+} from "@/lib/current-member";
 import { cn } from "@/lib/utils";
 import { ExpenseCard } from "./expense-card";
 import { MeSelector } from "./me-selector";
@@ -24,12 +28,11 @@ export function ExpensesView({
   expenses: ExpenseWithDetails[];
   balances: MemberBalance[];
 }) {
-  const [me, setMe] = useState<string | null>(null);
-  useEffect(() => setMe(getCurrentMember(group.code)), [group.code]);
+  const me = useCurrentMember(group.code);
+  const canEdit = useCanEdit(group.code, members);
 
   function chooseMe(id: string) {
     setCurrentMember(group.code, id);
-    setMe(id);
   }
 
   const total = expenses.reduce((a, e) => a + e.amount, 0);
@@ -108,6 +111,7 @@ export function ExpensesView({
                     groupCode={group.code}
                     me={me}
                     activeMembers={activeMembers}
+                    canEdit={canEdit}
                   />
                 ))}
               </ul>
@@ -116,17 +120,19 @@ export function ExpensesView({
         </div>
       )}
 
-      {/* Botón Añadir gasto — solo en esta solapa */}
-      <ExpenseSheet
-        groupCode={group.code}
-        members={activeMembers}
-        currency={group.currency}
-        trigger={
-          <button className="no-print fixed bottom-[88px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[var(--color-gold)] px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-black/20 transition active:scale-95">
-            <Plus className="size-5" /> Añadir gasto
-          </button>
-        }
-      />
+      {/* Botón Añadir gasto — solo en esta solapa y solo si puede editar */}
+      {canEdit && (
+        <ExpenseSheet
+          groupCode={group.code}
+          members={activeMembers}
+          currency={group.currency}
+          trigger={
+            <button className="no-print fixed bottom-[88px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[var(--color-gold)] px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-black/20 transition active:scale-95">
+              <Plus className="size-5" /> Añadir gasto
+            </button>
+          }
+        />
+      )}
     </div>
   );
 }

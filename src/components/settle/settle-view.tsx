@@ -11,6 +11,7 @@ import { copyToClipboard, whatsappLink } from "@/lib/share";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { markTransferPaid, unmarkTransfer } from "@/app/actions/settlements";
+import { useCanEdit } from "@/lib/current-member";
 
 export function SettleView({
   group,
@@ -25,6 +26,7 @@ export function SettleView({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const canEdit = useCanEdit(group.code, members);
   const memberOf = (id: string) => members.find((m) => m.id === id);
   const nameOf = (id: string) => memberOf(id)?.name ?? "?";
 
@@ -148,13 +150,15 @@ export function SettleView({
                       {to?.name} sin alias
                     </span>
                   )}
-                  <Button
-                    className="ml-auto h-10 gap-1.5 bg-[var(--color-neg)] px-4 text-white hover:opacity-90"
-                    disabled={busy === key}
-                    onClick={() => pay(t)}
-                  >
-                    Registrar Pago
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      className="ml-auto h-10 gap-1.5 bg-[var(--color-neg)] px-4 text-white hover:opacity-90"
+                      disabled={busy === key}
+                      onClick={() => pay(t)}
+                    >
+                      Registrar Pago
+                    </Button>
+                  )}
                 </div>
               </li>
             );
@@ -182,14 +186,20 @@ export function SettleView({
                     {formatMoney(s.amount, group.currency)}
                   </span>
                 </div>
-                <div className="flex justify-end px-4 pb-3.5 pt-2.5">
-                  <Button
-                    className="h-10 gap-1.5 bg-[var(--color-pos)] px-4 text-white hover:opacity-90"
-                    disabled={busy === s.id}
-                    onClick={() => undo(s)}
-                  >
-                    <Check className="size-4" /> Cancelado
-                  </Button>
+                <div className="flex items-center justify-end gap-2 px-4 pb-3.5 pt-2.5">
+                  {canEdit ? (
+                    <Button
+                      className="h-10 gap-1.5 bg-[var(--color-pos)] px-4 text-white hover:opacity-90"
+                      disabled={busy === s.id}
+                      onClick={() => undo(s)}
+                    >
+                      <Check className="size-4" /> Cancelado
+                    </Button>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-sm font-semibold text-pos">
+                      <Check className="size-4" /> Cancelado
+                    </span>
+                  )}
                 </div>
               </li>
             ))}

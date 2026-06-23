@@ -23,6 +23,7 @@ const addSchema = z.object({
   phone: z.string().trim().max(40).optional(),
   email: z.string().trim().max(120).optional(),
   aliasCbu: z.string().trim().max(120).optional(),
+  isAdmin: z.boolean().optional(),
 });
 
 export async function addMember(input: z.input<typeof addSchema>) {
@@ -37,10 +38,25 @@ export async function addMember(input: z.input<typeof addSchema>) {
     email: data.email || null,
     aliasCbu: data.aliasCbu || null,
     active: true,
+    isAdmin: data.isAdmin ?? false,
     createdAt: new Date().toISOString(),
   });
   revalidatePath(`/g/${data.groupCode}/miembros`);
   return { id };
+}
+
+export async function setMemberAdmin(input: {
+  id: string;
+  groupCode: string;
+  isAdmin: boolean;
+}) {
+  await db
+    .update(members)
+    .set({ isAdmin: input.isAdmin })
+    .where(eq(members.id, input.id));
+  revalidatePath(`/g/${input.groupCode}/miembros`);
+  revalidatePath(`/g/${input.groupCode}`);
+  return { ok: true };
 }
 
 const updateSchema = addSchema.extend({ id: z.string() });

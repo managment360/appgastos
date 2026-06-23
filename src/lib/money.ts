@@ -3,6 +3,8 @@
  * Formato Argentina: $1.250.000,00  (punto miles, coma decimales).
  */
 
+import { currencySymbol } from "./currencies";
+
 const arsFormatter = new Intl.NumberFormat("es-AR", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -13,10 +15,9 @@ export function formatCents(cents: number): string {
   return arsFormatter.format(cents / 100);
 }
 
-/** centavos (int) -> "$1.250.000,00". */
+/** centavos (int) -> "$1.250.000,00" (según la moneda). */
 export function formatMoney(cents: number, currency = "ARS"): string {
-  const symbol = currency === "ARS" ? "$" : `${currency} `;
-  return `${symbol}${formatCents(cents)}`;
+  return `${currencySymbol(currency)}${formatCents(cents)}`;
 }
 
 /** centavos con signo explícito: "+$1.000,00" / "-$1.000,00". */
