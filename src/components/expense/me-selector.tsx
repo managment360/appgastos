@@ -22,10 +22,10 @@ export function MeSelector({
           key={m.id}
           onClick={() => onChange(m.id)}
           className={cn(
-            "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition",
+            "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
             value === m.id
-              ? "border-primary bg-primary/10 text-primary"
-              : "bg-card text-muted-foreground"
+              ? "border-[var(--color-navy)] bg-[var(--color-navy)] text-white"
+              : "border-border bg-card text-muted-foreground"
           )}
         >
           {m.name}
