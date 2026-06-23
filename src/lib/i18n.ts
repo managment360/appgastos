@@ -2,7 +2,7 @@
  * Strings centralizadas (ES-AR por defecto). Punto único para i18n futuro.
  */
 export const t = {
-  appName: "Dividir Gastos",
+  appName: "Divididos",
   nav: {
     expenses: "Gastos",
     balances: "Balances",

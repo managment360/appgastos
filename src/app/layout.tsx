@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dividir Gastos",
+  title: "Divididos",
   description: "Dividí gastos de grupo fácil: viajes, asados, eventos.",
-  applicationName: "Dividir Gastos",
+  applicationName: "Divididos",
 };
 
 export const viewport: Viewport = {
