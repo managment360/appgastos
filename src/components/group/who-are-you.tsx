@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Star } from "lucide-react";
@@ -14,8 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-import { setCurrentMember, useCurrentMember } from "@/lib/current-member";
+import { getCurrentMember, setCurrentMember } from "@/lib/current-member";
 import { updateMember } from "@/app/actions/members";
 
 /** Al entrar al grupo: preguntar quién sos (sin login) y completar tus datos. */
@@ -27,16 +26,20 @@ export function WhoAreYou({
   members: Member[];
 }) {
   const router = useRouter();
-  const me = useCurrentMember(code);
-  const [dismissed, setDismissed] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [step, setStep] = useState<"pick" | "data">("pick");
   const [picked, setPicked] = useState<Member | null>(null);
   const [alias, setAlias] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Si ya elegiste quién sos (o lo descartaste), no molesta.
-  const open = me === null && !dismissed && members.length > 0;
+  // Mostrar solo si todavía no dijiste quién sos en este dispositivo.
+  useEffect(() => {
+    if (members.length > 0 && getCurrentMember(code) === null) {
+      setVisible(true);
+    }
+  }, [code, members.length]);
 
   function choose(m: Member) {
     setCurrentMember(code, m.id);
@@ -44,6 +47,7 @@ export function WhoAreYou({
     setAlias(m.aliasCbu ?? "");
     setPhone(m.phone ?? "");
     setEmail(m.email ?? "");
+    setStep("data");
   }
 
   async function saveData() {
@@ -59,23 +63,20 @@ export function WhoAreYou({
         aliasCbu: alias,
       });
       toast.success(`¡Hola, ${picked.name}!`);
-      setDismissed(true);
       router.refresh();
     } catch {
       toast.error("No se pudieron guardar los datos.");
     } finally {
+      // Cierra SIEMPRE (aunque falle la red): nunca queda colgado.
       setSaving(false);
+      setVisible(false);
     }
   }
 
-  function skip() {
-    setDismissed(true);
-  }
-
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && setDismissed(true)}>
+    <Dialog open={visible} onOpenChange={(o) => !o && setVisible(false)}>
       <DialogContent className="max-w-sm rounded-2xl" showCloseButton={false}>
-        {!picked ? (
+        {step === "pick" ? (
           <>
             <DialogHeader>
               <DialogTitle className="text-xl">¿Quién sos?</DialogTitle>
@@ -84,7 +85,7 @@ export function WhoAreYou({
               Elegí tu nombre en este grupo. Sirve para mostrarte qué te toca y
               quién puede editar.
             </p>
-            <ul className="flex flex-col gap-2 pt-1">
+            <ul className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto pt-1">
               {members.map((m) => (
                 <li key={m.id}>
                   <button
@@ -103,7 +104,7 @@ export function WhoAreYou({
               ))}
             </ul>
             <button
-              onClick={skip}
+              onClick={() => setVisible(false)}
               className="pt-1 text-center text-sm text-muted-foreground underline"
             >
               Ver sin elegir
@@ -113,7 +114,7 @@ export function WhoAreYou({
           <>
             <DialogHeader>
               <DialogTitle className="text-xl">
-                Tus datos, {picked.name}
+                Tus datos, {picked?.name}
               </DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
@@ -160,7 +161,7 @@ export function WhoAreYou({
                 {saving ? "Guardando…" : "Listo"}
               </Button>
               <button
-                onClick={skip}
+                onClick={() => setVisible(false)}
                 className="text-center text-sm text-muted-foreground underline"
               >
                 Completar después

@@ -120,18 +120,23 @@ export function ExpensesView({
         </div>
       )}
 
-      {/* Botón Añadir gasto — solo en esta solapa y solo si puede editar */}
+      {/* FAB de gasto — chico, abajo a la izquierda, solo "+" (solo en Gastos y si puede editar) */}
       {canEdit && (
-        <ExpenseSheet
-          groupCode={group.code}
-          members={activeMembers}
-          currency={group.currency}
-          trigger={
-            <button className="no-print fixed bottom-[88px] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[var(--color-gold)] px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-black/20 transition active:scale-95">
-              <Plus className="size-5" /> Añadir gasto
-            </button>
-          }
-        />
+        <div className="no-print pointer-events-none fixed inset-x-0 bottom-[84px] z-30 mx-auto flex w-full max-w-md justify-start px-4">
+          <ExpenseSheet
+            groupCode={group.code}
+            members={activeMembers}
+            currency={group.currency}
+            trigger={
+              <button
+                className="pointer-events-auto flex size-12 items-center justify-center rounded-full bg-[var(--color-gold)] text-white shadow-lg shadow-black/20 transition active:scale-95"
+                aria-label="Añadir gasto"
+              >
+                <Plus className="size-6" />
+              </button>
+            }
+          />
+        </div>
       )}
     </div>
   );
@@ -145,8 +150,8 @@ function EmptyState() {
       </div>
       <h3 className="text-lg font-semibold">Todavía no hay gastos</h3>
       <p className="max-w-xs text-base text-muted-foreground">
-        Tocá <span className="font-semibold text-gold">Añadir gasto</span> para
-        cargar el primero. La app hace las cuentas.
+        Tocá el botón <span className="font-semibold text-gold">＋</span> (abajo a
+        la izquierda) para cargar el primero. La app hace las cuentas.
       </p>
       <Receipt className="size-5 text-muted-foreground" />
     </div>

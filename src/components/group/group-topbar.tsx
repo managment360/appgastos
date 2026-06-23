@@ -3,16 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
-import type { Group } from "@/db/schema";
+import type { Group, Member, Note } from "@/db/schema";
 import { ShareGroupSheet } from "./share-group-sheet";
 import { NotesSheet } from "./notes-sheet";
 
 export function GroupTopbar({
   group,
   memberCount,
+  members,
+  notes,
 }: {
   group: Group;
   memberCount: number;
+  members: Member[];
+  notes: Note[];
 }) {
   const router = useRouter();
   return (
@@ -43,7 +47,7 @@ export function GroupTopbar({
         {memberCount}
       </Link>
 
-      <NotesSheet code={group.code} initialNotes={group.notes} />
+      <NotesSheet code={group.code} members={members} notes={notes} />
       <ShareGroupSheet group={group} />
     </header>
   );

@@ -90,6 +90,19 @@ export const expenseShares = pgTable("expense_shares", {
   computedAmount: integer("computed_amount").notNull(),
 });
 
+export const notes = pgTable("notes", {
+  id: text("id").primaryKey(),
+  groupId: text("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  /** Autor (miembro). Nullable por si se cargó sin elegir quién sos. */
+  memberId: text("member_id").references(() => members.id, {
+    onDelete: "set null",
+  }),
+  text: text("text").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
 export const settlements = pgTable("settlements", {
   id: text("id").primaryKey(),
   groupId: text("group_id")
@@ -156,3 +169,4 @@ export type NewExpense = typeof expenses.$inferInsert;
 export type ExpensePayer = typeof expensePayers.$inferSelect;
 export type ExpenseShare = typeof expenseShares.$inferSelect;
 export type Settlement = typeof settlements.$inferSelect;
+export type Note = typeof notes.$inferSelect;

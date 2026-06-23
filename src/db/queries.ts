@@ -11,12 +11,14 @@ import {
   expensePayers,
   expenseShares,
   settlements,
+  notes,
   type Group,
   type Member,
   type Expense,
   type ExpensePayer,
   type ExpenseShare,
   type Settlement,
+  type Note,
 } from "./schema";
 import { normalizeCode } from "@/lib/ids";
 
@@ -68,6 +70,14 @@ export async function getExpenses(
 
 export async function getSettlements(groupId: string): Promise<Settlement[]> {
   return db.select().from(settlements).where(eq(settlements.groupId, groupId));
+}
+
+export async function getNotes(groupId: string): Promise<Note[]> {
+  return db
+    .select()
+    .from(notes)
+    .where(eq(notes.groupId, groupId))
+    .orderBy(desc(notes.createdAt));
 }
 
 export type GroupFull = {
