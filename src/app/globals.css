@@ -155,6 +155,13 @@
     /* Base un poco más grande para lectura cómoda (usuarios 40+). */
     font-size: 17px;
   }
+  /* Candado global: la página nunca se ensancha horizontalmente, así la barra
+     inferior fija mantiene SIEMPRE el mismo tamaño en todas las solapas. */
+  html,
+  body {
+    overflow-x: clip;
+    max-width: 100%;
+  }
 }
 
 @layer utilities {
