@@ -4,15 +4,15 @@ import { formatDateShort } from "@/lib/dates";
 
 /**
  * Tabla del reporte estilo Splid. Presentacional puro.
- * Usa colores HEX inline (no clases oklch de Tailwind) para que el export a
- * imagen/PDF salga fiel. Se usa en pantalla y como objetivo de impresión/captura.
+ * Colores HEX inline (no clases oklch) para que el export a imagen/PDF salga fiel.
  */
 const NAVY = "#15253f";
 const NAVY_SOFT = "#22375c";
 const GREEN = "#1f8a4c";
 const RED = "#c0392b";
 const SKY = "#c7dcef";
-const LINE = "#d8e1ee";
+const LINE = "#8aa0bd"; // líneas internas (más oscuras que antes)
+const GROUP = "#15253f"; // separador fuerte ENTRE miembros (navy)
 const MUTED = "#5f718c";
 
 export function ReportTable({
@@ -26,13 +26,11 @@ export function ReportTable({
   groupName: string;
   groupIcon?: string;
   currency: string;
-  /** Fecha de envío (ISO YYYY-MM-DD). */
   sentDate: string;
 }) {
   const { members, rows } = report;
   const symbol = currency === "ARS" ? "$" : `${currency} `;
 
-  // Totales por miembro (pagó / prorrateo) y diferencia.
   const tot: Record<string, { paid: number; share: number }> = {};
   members.forEach((m) => (tot[m.id] = { paid: 0, share: 0 }));
   rows.forEach((r) =>
@@ -43,12 +41,15 @@ export function ReportTable({
   );
   const grandTotal = rows.reduce((a, r) => a + r.amount, 0);
 
+  const border = `1px solid ${LINE}`;
+  const groupBorder = `2px solid ${GROUP}`;
+
   const th: React.CSSProperties = {
     background: NAVY,
     color: "#fff",
     fontWeight: 600,
     padding: "7px 9px",
-    border: `1px solid ${NAVY_SOFT}`,
+    border,
     whiteSpace: "nowrap",
   };
   const sub: React.CSSProperties = {
@@ -56,13 +57,13 @@ export function ReportTable({
     color: "#fff",
     fontWeight: 600,
     padding: "5px 9px",
-    border: `1px solid ${NAVY}`,
+    border,
     fontSize: "11px",
     textAlign: "center",
   };
   const td: React.CSSProperties = {
     padding: "6px 9px",
-    border: `1px solid ${LINE}`,
+    border,
     textAlign: "right",
     whiteSpace: "nowrap",
     fontVariantNumeric: "tabular-nums",
@@ -74,6 +75,9 @@ export function ReportTable({
     fontWeight: 700,
     borderTop: `2px solid ${NAVY}`,
   };
+
+  // Bordes que marcan el inicio de cada miembro (separador fuerte).
+  const gl = { borderLeft: groupBorder } as React.CSSProperties;
 
   return (
     <div
@@ -118,20 +122,27 @@ export function ReportTable({
               Fecha
             </th>
             {members.map((m) => (
-              <th key={m.id} colSpan={2} style={{ ...th, textAlign: "center" }}>
+              <th
+                key={m.id}
+                colSpan={2}
+                style={{ ...th, ...gl, textAlign: "center" }}
+              >
                 {m.name}
               </th>
             ))}
           </tr>
           <tr>
             {members.map((m) => (
-              <FragmentSub key={m.id} sub={sub} />
+              <FragmentSub key={m.id} sub={sub} gl={gl} />
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.expenseId}>
+          {rows.map((r, ri) => (
+            <tr
+              key={r.expenseId}
+              style={ri % 2 ? { background: "#f6f9fc" } : undefined}
+            >
               <td style={{ ...tdL, fontWeight: 600 }}>{r.concept}</td>
               <td style={td}>
                 {symbol}
@@ -145,6 +156,7 @@ export function ReportTable({
                   <FragmentCell
                     key={m.id}
                     td={td}
+                    gl={gl}
                     symbol={symbol}
                     paid={cell.paid}
                     share={cell.share}
@@ -155,7 +167,7 @@ export function ReportTable({
           ))}
         </tbody>
         <tfoot>
-          {/* Totales por columna */}
+          {/* Totales por columna (celdas reales, alineadas) */}
           <tr>
             <td style={{ ...foot, textAlign: "left" }} colSpan={3}>
               Totales
@@ -165,23 +177,14 @@ export function ReportTable({
               {formatCents(grandTotal)}
             </td>
             {members.map((m) => (
-              <td key={m.id} colSpan={2} style={{ ...foot, padding: 0 }}>
-                <div style={{ display: "flex" }}>
-                  <span
-                    style={{
-                      flex: 1,
-                      padding: "6px 9px",
-                      color: GREEN,
-                      borderRight: `1px solid ${NAVY}`,
-                    }}
-                  >
-                    {tot[m.id].paid ? `${symbol}${formatCents(tot[m.id].paid)}` : "–"}
-                  </span>
-                  <span style={{ flex: 1, padding: "6px 9px", color: RED }}>
-                    {tot[m.id].share ? `-${symbol}${formatCents(tot[m.id].share)}` : "–"}
-                  </span>
-                </div>
-              </td>
+              <FragmentTotal
+                key={m.id}
+                foot={foot}
+                gl={gl}
+                symbol={symbol}
+                paid={tot[m.id].paid}
+                share={tot[m.id].share}
+              />
             ))}
           </tr>
           {/* Diferencia (Gasto Total) */}
@@ -200,6 +203,7 @@ export function ReportTable({
                   colSpan={2}
                   style={{
                     ...foot,
+                    ...gl,
                     background: NAVY,
                     color: diff > 0 ? "#7ee2a6" : diff < 0 ? "#ff9b8f" : "#fff",
                     textAlign: "center",
@@ -219,10 +223,16 @@ export function ReportTable({
   );
 }
 
-function FragmentSub({ sub }: { sub: React.CSSProperties }) {
+function FragmentSub({
+  sub,
+  gl,
+}: {
+  sub: React.CSSProperties;
+  gl: React.CSSProperties;
+}) {
   return (
     <>
-      <th style={sub}>Pagó</th>
+      <th style={{ ...sub, ...gl }}>Pagó</th>
       <th style={sub}>Prorrateo</th>
     </>
   );
@@ -230,24 +240,49 @@ function FragmentSub({ sub }: { sub: React.CSSProperties }) {
 
 function FragmentCell({
   td,
+  gl,
   symbol,
   paid,
   share,
 }: {
   td: React.CSSProperties;
+  gl: React.CSSProperties;
   symbol: string;
   paid: number;
   share: number;
 }) {
-  const GREENc = "#1f8a4c";
-  const REDc = "#c0392b";
   return (
     <>
-      <td style={{ ...td, color: GREENc, fontWeight: 600 }}>
+      <td style={{ ...td, ...gl, color: GREEN, fontWeight: 600 }}>
         {paid ? `${symbol}${formatCents(paid)}` : ""}
       </td>
-      <td style={{ ...td, color: REDc }}>
+      <td style={{ ...td, color: RED }}>
         {share ? `-${symbol}${formatCents(share)}` : ""}
+      </td>
+    </>
+  );
+}
+
+function FragmentTotal({
+  foot,
+  gl,
+  symbol,
+  paid,
+  share,
+}: {
+  foot: React.CSSProperties;
+  gl: React.CSSProperties;
+  symbol: string;
+  paid: number;
+  share: number;
+}) {
+  return (
+    <>
+      <td style={{ ...foot, ...gl, color: GREEN }}>
+        {paid ? `${symbol}${formatCents(paid)}` : "–"}
+      </td>
+      <td style={{ ...foot, color: RED }}>
+        {share ? `-${symbol}${formatCents(share)}` : "–"}
       </td>
     </>
   );
