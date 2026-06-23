@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Copy, Check, PartyPopper, MessageCircle } from "lucide-react";
+import { Copy, Check, PartyPopper, MessageCircle } from "lucide-react";
 import type { Group, Member, Settlement } from "@/db/schema";
 import type { Transfer } from "@/lib/settle";
 import { formatMoney } from "@/lib/money";
@@ -68,14 +68,19 @@ export function SettleView({
   }
 
   function sendWhatsApp() {
-    const lines = [`💸 ${group.name} — Liquidación`, ""];
+    const lines = [`💸 *${group.name}* — Liquidación`, ""];
     for (const t of pending) {
       const alias = memberOf(t.toMemberId)?.aliasCbu;
       lines.push(
-        `• ${nameOf(t.fromMemberId)} → ${nameOf(t.toMemberId)}: ${formatMoney(
+        `• ${nameOf(t.fromMemberId)} le debe a ${nameOf(t.toMemberId)}: ${formatMoney(
           t.amount,
           group.currency
-        )}${alias ? ` (${alias})` : ""}`
+        )}`
+      );
+      lines.push(
+        alias
+          ? `   📋 Alias de ${nameOf(t.toMemberId)}: ${alias}`
+          : `   (${nameOf(t.toMemberId)} no cargó alias)`
       );
     }
     window.open(whatsappLink(lines.join("\n")), "_blank");
@@ -84,11 +89,11 @@ export function SettleView({
   const allSettled = pending.length === 0;
 
   return (
-    <div className="flex flex-col gap-3 px-4 py-4">
+    <div className="flex flex-col gap-2 px-4 py-4">
       {/* Leyenda */}
-      <div className="rounded-2xl border border-[var(--color-gold)]/40 bg-[var(--color-gold-soft)] px-4 py-3 text-[var(--color-navy)]">
-        <p className="font-bold">Cuentas claras conservan la amistad 🤝</p>
-        <p className="text-sm">Reintegremos a quienes pagaron los gastos.</p>
+      <div className="rounded-2xl border border-[var(--color-gold)]/40 bg-[var(--color-gold-soft)] px-4 py-2.5 text-[var(--color-navy)]">
+        <p className="text-sm font-bold">Cuentas claras conservan la amistad 🤝</p>
+        <p className="text-xs">Reintegremos a quienes pagaron los gastos.</p>
       </div>
 
       <div className="flex items-center justify-between px-1">
@@ -113,7 +118,7 @@ export function SettleView({
           </p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-2">
           {pending.map((t) => {
             const key = `${t.fromMemberId}-${t.toMemberId}`;
             const to = memberOf(t.toMemberId);
@@ -122,21 +127,21 @@ export function SettleView({
                 key={key}
                 className="overflow-hidden rounded-2xl border bg-card shadow-sm"
               >
-                {/* Fila 1: quiénes + importe */}
-                <div className="flex items-center gap-2 px-4 pt-3.5">
-                  <span className="text-base font-bold">
-                    {nameOf(t.fromMemberId)}
-                  </span>
-                  <ArrowRight className="size-4 text-muted-foreground" />
-                  <span className="text-base font-bold">
+                {/* Fila 1: quién le debe a quién + importe */}
+                <div className="flex items-center gap-2 px-4 pt-2.5">
+                  <span className="text-sm font-semibold leading-tight">
+                    {nameOf(t.fromMemberId)}{" "}
+                    <span className="font-normal text-muted-foreground">
+                      le debe a
+                    </span>{" "}
                     {nameOf(t.toMemberId)}
                   </span>
-                  <span className="ml-auto text-xl font-extrabold tabular text-neg">
+                  <span className="ml-auto text-lg font-extrabold tabular text-neg">
                     {formatMoney(t.amount, group.currency)}
                   </span>
                 </div>
                 {/* Fila 2: alias + acción */}
-                <div className="flex items-center gap-2 px-4 pb-3.5 pt-2.5">
+                <div className="flex items-center gap-2 px-4 pb-2.5 pt-2">
                   {to?.aliasCbu ? (
                     <button
                       onClick={() => copyAlias(to.aliasCbu)}
@@ -172,21 +177,25 @@ export function SettleView({
           <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Pagos cancelados
           </h3>
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-2">
             {paid.map((s) => (
               <li
                 key={s.id}
                 className="overflow-hidden rounded-2xl border bg-card shadow-sm"
               >
-                <div className="flex items-center gap-2 px-4 pt-3.5">
-                  <span className="font-bold">{nameOf(s.fromMemberId)}</span>
-                  <ArrowRight className="size-4 text-muted-foreground" />
-                  <span className="font-bold">{nameOf(s.toMemberId)}</span>
-                  <span className="ml-auto text-lg font-bold tabular text-muted-foreground line-through">
+                <div className="flex items-center gap-2 px-4 pt-2.5">
+                  <span className="text-sm font-semibold leading-tight">
+                    {nameOf(s.fromMemberId)}{" "}
+                    <span className="font-normal text-muted-foreground">
+                      le pagó a
+                    </span>{" "}
+                    {nameOf(s.toMemberId)}
+                  </span>
+                  <span className="ml-auto text-base font-bold tabular text-muted-foreground line-through">
                     {formatMoney(s.amount, group.currency)}
                   </span>
                 </div>
-                <div className="flex items-center justify-end gap-2 px-4 pb-3.5 pt-2.5">
+                <div className="flex items-center justify-end gap-2 px-4 pb-2.5 pt-2">
                   {canEdit ? (
                     <Button
                       className="h-10 gap-1.5 bg-[var(--color-pos)] px-4 text-white hover:opacity-90"

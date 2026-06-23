@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { cn, scrollIntoCenter } from "@/lib/utils";
 import type { Member, SplitType } from "@/db/schema";
 import { CATEGORIES } from "@/lib/i18n";
 import { formatCents, parseToCents } from "@/lib/money";
@@ -45,10 +45,9 @@ export type ExpenseInitial = {
   }[];
 };
 
+// Solo dos formas de dividir: igual o por partes.
 const SPLIT_TABS: { key: SplitType; label: string }[] = [
   { key: "equal", label: "Igual" },
-  { key: "custom_amount", label: "Importes" },
-  { key: "percent", label: "%" },
   { key: "units", label: "Partes" },
 ];
 
@@ -67,8 +66,8 @@ export function ExpenseSheet({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const activeMembers = members;
 
-  // --- estado base ---
   const [amountStr, setAmountStr] = useState(
     initial ? formatCents(initial.amount) : ""
   );
@@ -76,17 +75,11 @@ export function ExpenseSheet({
   const [date, setDate] = useState(initial?.expenseDate ?? todayISO());
   const [category, setCategory] = useState<string>(initial?.category ?? "");
   const [splitType, setSplitType] = useState<SplitType>(
-    initial?.splitType ?? "equal"
+    initial?.splitType === "units" ? "units" : "equal"
   );
   const [saving, setSaving] = useState(false);
 
-  const totalCents = parseToCents(amountStr);
-
-  // --- pagadores ---
-  const [multiPayer, setMultiPayer] = useState(
-    (initial?.payers.length ?? 0) > 1
-  );
-  // Vacío por defecto: obliga a elegir quién pagó (pedido del cliente).
+  const [multiPayer, setMultiPayer] = useState((initial?.payers.length ?? 0) > 1);
   const [singlePayer, setSinglePayer] = useState<string>(
     initial && initial.payers.length === 1 ? initial.payers[0].memberId : ""
   );
@@ -96,29 +89,12 @@ export function ExpenseSheet({
     return m;
   });
 
-  // --- participantes ---
   const [participants, setParticipants] = useState<Set<string>>(
     () =>
       new Set(
         initial ? initial.shares.map((s) => s.memberId) : members.map((m) => m.id)
       )
   );
-
-  // valores por participante según tipo
-  const [customAmt, setCustomAmt] = useState<Record<string, string>>(() => {
-    const m: Record<string, string> = {};
-    initial?.shares.forEach((s) => {
-      if (s.fixedAmount != null) m[s.memberId] = formatCents(s.fixedAmount);
-    });
-    return m;
-  });
-  const [percentVal, setPercentVal] = useState<Record<string, string>>(() => {
-    const m: Record<string, string> = {};
-    initial?.shares.forEach((s) => {
-      if (s.percent != null) m[s.memberId] = String(s.percent);
-    });
-    return m;
-  });
   const [units, setUnits] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {};
     initial?.shares.forEach((s) => {
@@ -127,7 +103,24 @@ export function ExpenseSheet({
     return m;
   });
 
-  const activeMembers = members; // ya vienen filtrados activos
+  // Al abrir un gasto NUEVO, arrancar siempre con campos vacíos.
+  useEffect(() => {
+    if (open && !initial) {
+      setAmountStr("");
+      setConcept("");
+      setDate(todayISO());
+      setCategory("");
+      setSplitType("equal");
+      setMultiPayer(false);
+      setSinglePayer("");
+      setPayerAmounts({});
+      setParticipants(new Set(members.map((m) => m.id)));
+      setUnits({});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const totalCents = parseToCents(amountStr);
 
   function toggleParticipant(id: string) {
     setParticipants((prev) => {
@@ -138,19 +131,15 @@ export function ExpenseSheet({
     });
   }
 
-  // Construye los inputs de participantes para computeShares / validación.
   const participantInputs = useMemo(() => {
     return activeMembers
       .filter((m) => participants.has(m.id))
       .map((m) => ({
         memberId: m.id,
-        weight: units[m.id] != null ? Number(units[m.id]) : 1,
-        percent: percentVal[m.id] != null ? Number(percentVal[m.id]) : 0,
-        fixedAmount: parseToCents(customAmt[m.id] ?? "0"),
+        weight: units[m.id] != null && units[m.id] !== "" ? Number(units[m.id]) : 1,
       }));
-  }, [activeMembers, participants, units, percentVal, customAmt]);
+  }, [activeMembers, participants, units]);
 
-  // Preview de lo que le toca a cada uno.
   const preview = useMemo(() => {
     if (totalCents <= 0) return new Map<string, number>();
     const shares = computeShares(totalCents, splitType, participantInputs);
@@ -169,7 +158,7 @@ export function ExpenseSheet({
 
   async function handleSubmit() {
     if (totalCents <= 0) return toast.error("Ingresá un monto.");
-    if (!concept.trim()) return toast.error("Poné un concepto.");
+    if (!concept.trim()) return toast.error("Poné un título.");
 
     const payers = buildPayers();
     const payersSum = payers.reduce((a, p) => a + p.amount, 0);
@@ -193,8 +182,8 @@ export function ExpenseSheet({
       participants: participantInputs.map((p) => ({
         memberId: p.memberId,
         weight: splitType === "units" ? p.weight : null,
-        percent: splitType === "percent" ? p.percent : null,
-        fixedAmount: splitType === "custom_amount" ? p.fixedAmount : null,
+        percent: null,
+        fixedAmount: null,
       })),
     };
 
@@ -213,6 +202,7 @@ export function ExpenseSheet({
   }
 
   const participantCount = participants.size;
+  const allSelected = participantCount === activeMembers.length;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -244,20 +234,22 @@ export function ExpenseSheet({
             </div>
           </div>
 
-          {/* Concepto */}
+          {/* Título */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="ex-concept">Concepto</Label>
+            <Label htmlFor="ex-concept">Título del gasto</Label>
             <Input
               id="ex-concept"
-              placeholder="Ej. Carne"
+              placeholder="Ej. Carne de cerdo"
               value={concept}
               onChange={(e) => setConcept(e.target.value)}
+              onFocus={scrollIntoCenter}
+              autoCapitalize="words"
             />
           </div>
 
           {/* Categoría */}
           <div className="flex flex-col gap-2">
-            <Label>Categoría (opcional)</Label>
+            <Label>Categoría del gasto (opcional)</Label>
             <div className="grid grid-cols-2 gap-2">
               {CATEGORIES.map((c) => (
                 <button
@@ -282,35 +274,47 @@ export function ExpenseSheet({
 
           {/* Pagadores */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <Label>¿Quién pagó?</Label>
+            <Label>¿Quién pagó el gasto?</Label>
+            {/* Segmento Un pagador / Varios */}
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
               <button
                 type="button"
-                onClick={() => setMultiPayer((v) => !v)}
-                className="text-xs font-medium text-primary"
+                onClick={() => setMultiPayer(false)}
+                className={cn(
+                  "rounded-lg py-1.5 text-sm font-semibold transition",
+                  !multiPayer ? "bg-background shadow-sm" : "text-muted-foreground"
+                )}
               >
-                {multiPayer ? "Un solo pagador" : "Varios pagadores"}
+                Un pagador
+              </button>
+              <button
+                type="button"
+                onClick={() => setMultiPayer(true)}
+                className={cn(
+                  "rounded-lg py-1.5 text-sm font-semibold transition",
+                  multiPayer ? "bg-background shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                Varios pagadores
               </button>
             </div>
 
             {!multiPayer ? (
-              <div className="flex flex-wrap gap-2">
+              <select
+                value={singlePayer}
+                onChange={(e) => setSinglePayer(e.target.value)}
+                onFocus={scrollIntoCenter}
+                className="h-11 rounded-xl border bg-card px-3 text-base outline-none focus:border-[var(--color-gold)]"
+              >
+                <option value="" disabled>
+                  Elegí quién pagó…
+                </option>
                 {activeMembers.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setSinglePayer(m.id)}
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-sm transition",
-                      singlePayer === m.id
-                        ? "border-primary bg-primary/10 font-medium"
-                        : "bg-card"
-                    )}
-                  >
+                  <option key={m.id} value={m.id}>
                     {m.name}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
             ) : (
               <div className="flex flex-col gap-2 rounded-xl border bg-card/50 p-3">
                 {activeMembers.map((m) => (
@@ -323,6 +327,7 @@ export function ExpenseSheet({
                       onChange={(v) =>
                         setPayerAmounts((prev) => ({ ...prev, [m.id]: v }))
                       }
+                      onFocus={scrollIntoCenter}
                       className="h-9 w-28 rounded-md border bg-transparent px-2 text-right"
                     />
                   </div>
@@ -341,25 +346,37 @@ export function ExpenseSheet({
               <Label className="flex items-center gap-1">
                 <Users className="size-4" /> Participan ({participantCount})
               </Label>
-              <button
-                type="button"
-                className="text-xs font-medium text-primary"
-                onClick={() =>
-                  setParticipants(
-                    participantCount === activeMembers.length
-                      ? new Set()
-                      : new Set(activeMembers.map((m) => m.id))
-                  )
-                }
-              >
-                {participantCount === activeMembers.length
-                  ? "Ninguno"
-                  : "Todos"}
-              </button>
+              {/* Segmento Ninguno / Todos */}
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setParticipants(new Set())}
+                  className={cn(
+                    "rounded-md px-3 py-1 font-semibold transition",
+                    participantCount === 0
+                      ? "bg-background shadow-sm"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  Ninguno
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setParticipants(new Set(activeMembers.map((m) => m.id)))
+                  }
+                  className={cn(
+                    "rounded-md px-3 py-1 font-semibold transition",
+                    allSelected ? "bg-background shadow-sm" : "text-muted-foreground"
+                  )}
+                >
+                  Todos
+                </button>
+              </div>
             </div>
 
-            {/* Tabs de tipo de división */}
-            <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
+            {/* Tabs de tipo de división: Igual / Partes */}
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
               {SPLIT_TABS.map((tab) => (
                 <button
                   key={tab.key}
@@ -377,7 +394,6 @@ export function ExpenseSheet({
               ))}
             </div>
 
-            {/* Lista de miembros con su input según tipo */}
             <ul className="flex flex-col gap-1.5 pt-1">
               {activeMembers.map((m) => {
                 const on = participants.has(m.id);
@@ -409,33 +425,6 @@ export function ExpenseSheet({
                         ${formatCents(toca)}
                       </span>
                     )}
-                    {on && splitType === "custom_amount" && (
-                      <MoneyInput
-                        placeholder="0"
-                        value={customAmt[m.id] ?? ""}
-                        onChange={(v) =>
-                          setCustomAmt((p) => ({ ...p, [m.id]: v }))
-                        }
-                        className="h-8 w-24 rounded-md border bg-transparent px-2 text-right"
-                      />
-                    )}
-                    {on && splitType === "percent" && (
-                      <div className="flex items-center gap-1">
-                        <Input
-                          inputMode="decimal"
-                          placeholder="0"
-                          value={percentVal[m.id] ?? ""}
-                          onChange={(e) =>
-                            setPercentVal((p) => ({
-                              ...p,
-                              [m.id]: e.target.value,
-                            }))
-                          }
-                          className="h-8 w-16 text-right tabular"
-                        />
-                        <span className="text-sm text-muted-foreground">%</span>
-                      </div>
-                    )}
                     {on && splitType === "units" && (
                       <Input
                         inputMode="numeric"
@@ -444,6 +433,7 @@ export function ExpenseSheet({
                         onChange={(e) =>
                           setUnits((p) => ({ ...p, [m.id]: e.target.value }))
                         }
+                        onFocus={scrollIntoCenter}
                         className="h-8 w-16 text-right tabular"
                       />
                     )}
@@ -455,7 +445,7 @@ export function ExpenseSheet({
 
           {/* Fecha */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="ex-date">Fecha (opcional)</Label>
+            <Label htmlFor="ex-date">Fecha del gasto (opcional)</Label>
             <DateField id="ex-date" value={date} onChange={setDate} />
           </div>
 
@@ -473,13 +463,7 @@ export function ExpenseSheet({
   );
 }
 
-function PayerSumHint({
-  payers,
-  total,
-}: {
-  payers: string[];
-  total: number;
-}) {
+function PayerSumHint({ payers, total }: { payers: string[]; total: number }) {
   const sum = payers.reduce((a, v) => a + parseToCents(v), 0);
   const ok = sum === total && total > 0;
   return (

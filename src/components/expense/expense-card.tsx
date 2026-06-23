@@ -103,7 +103,7 @@ export function ExpenseCard({
         {involved && (
           <span
             className={cn(
-              "text-xs font-medium",
+              "text-sm font-semibold",
               myNet > 0
                 ? "text-pos"
                 : myNet < 0

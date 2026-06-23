@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -32,7 +32,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, scrollIntoCenter } from "@/lib/utils";
 import { copyToClipboard } from "@/lib/share";
 import {
   addMember,
@@ -282,6 +282,16 @@ function MemberSheet({
   const [aliasCbu, setAliasCbu] = useState(member?.aliasCbu ?? "");
   const [saving, setSaving] = useState(false);
 
+  // Al abrir, cargar los datos del miembro (edición) o vaciar (nuevo).
+  useEffect(() => {
+    if (open) {
+      setName(member?.name ?? "");
+      setPhone(member?.phone ?? "");
+      setEmail(member?.email ?? "");
+      setAliasCbu(member?.aliasCbu ?? "");
+    }
+  }, [open, member]);
+
   async function save() {
     if (!name.trim()) return toast.error("El nombre es obligatorio.");
     setSaving(true);
@@ -321,6 +331,8 @@ function MemberSheet({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Nombre"
+              onFocus={scrollIntoCenter}
+              autoCapitalize="words"
               autoFocus
             />
           </Field>

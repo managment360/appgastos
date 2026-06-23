@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { X, Plus, Star } from "lucide-react";
@@ -18,10 +18,13 @@ import { GROUP_ICONS } from "@/lib/i18n";
 import { CURRENCIES } from "@/lib/currencies";
 import { createGroup } from "@/app/actions/groups";
 import { rememberGroup } from "@/lib/recent-groups";
-import { cn } from "@/lib/utils";
+import { cn, scrollIntoCenter } from "@/lib/utils";
+
+type Step = "form" | "confirm-empty" | "confirm-ready";
 
 export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   const router = useRouter();
+  const memberRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState<string>(GROUP_ICONS[0]);
@@ -30,7 +33,20 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   const [memberList, setMemberList] = useState<
     { name: string; isAdmin: boolean }[]
   >([]);
+  const [step, setStep] = useState<Step>("form");
   const [saving, setSaving] = useState(false);
+
+  // Campos vacíos en cada apertura.
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setIcon(GROUP_ICONS[0]);
+      setCurrency("ARS");
+      setMemberInput("");
+      setMemberList([]);
+      setStep("form");
+    }
+  }, [open]);
 
   function addMember() {
     const n = memberInput.trim();
@@ -49,25 +65,25 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
     );
   }
 
-  async function handleSubmit() {
+  function onCreatePressed() {
     if (!name.trim()) {
       toast.error("Poné un nombre al grupo.");
       return;
     }
+    setStep(memberList.length === 0 ? "confirm-empty" : "confirm-ready");
+  }
+
+  async function doCreate() {
     setSaving(true);
     try {
-      const res = await createGroup({
-        name,
-        icon,
-        currency,
-        members: memberList,
-      });
+      const res = await createGroup({ name, icon, currency, members: memberList });
       rememberGroup({ code: res.code, name: res.name, icon: res.icon });
       toast.success(`Grupo creado: ${res.code}`);
       router.push(`/g/${res.code}`);
     } catch {
       toast.error("No se pudo crear el grupo.");
       setSaving(false);
+      setStep("form");
     }
   }
 
@@ -85,7 +101,7 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
         <div className="flex flex-col gap-5 px-5 pb-6">
           {/* Ícono */}
           <div className="flex flex-col gap-2">
-            <Label>Ícono</Label>
+            <Label>Seleccioná un ícono que identifique al grupo</Label>
             <div className="flex flex-wrap gap-2">
               {GROUP_ICONS.map((emo) => (
                 <button
@@ -107,19 +123,21 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
 
           {/* Nombre */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="g-name">Nombre</Label>
+            <Label htmlFor="g-name">Nombre del grupo</Label>
             <Input
               id="g-name"
               placeholder="Ej. Asado del finde"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onFocus={scrollIntoCenter}
+              autoCapitalize="words"
               autoFocus
             />
           </div>
 
           {/* Moneda */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="g-cur">Moneda</Label>
+            <Label htmlFor="g-cur">Moneda del grupo</Label>
             <select
               id="g-cur"
               value={currency}
@@ -134,14 +152,18 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
             </select>
           </div>
 
-          {/* Miembros iniciales */}
+          {/* Miembros */}
           <div className="flex flex-col gap-2">
-            <Label>Miembros (la ⭐ marca administrador)</Label>
+            <Label htmlFor="g-member">Miembros del grupo</Label>
             <div className="flex gap-2">
               <Input
-                placeholder="Nombre"
+                id="g-member"
+                ref={memberRef}
+                placeholder="Nombre del miembro"
                 value={memberInput}
                 onChange={(e) => setMemberInput(e.target.value)}
+                onFocus={scrollIntoCenter}
+                autoCapitalize="words"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -149,10 +171,20 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
                   }
                 }}
               />
-              <Button type="button" variant="secondary" onClick={addMember}>
-                <Plus className="size-4" />
+              <Button
+                type="button"
+                className="shrink-0 gap-1.5 px-4"
+                onClick={addMember}
+              >
+                <Plus className="size-4" /> Agregar
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              La <span className="text-[var(--color-gold)]">⭐</span> marca
+              administrador. Si no marcás ninguno, todos pueden editar. Se genera
+              un código para compartir.
+            </p>
+
             {memberList.length > 0 && (
               <ul className="flex flex-wrap gap-2 pt-1">
                 {memberList.map((m) => (
@@ -190,20 +222,70 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
                 ))}
               </ul>
             )}
-            <p className="text-xs text-muted-foreground">
-              Si no marcás ningún admin, todos pueden editar. Se genera un código
-              para compartir.
-            </p>
           </div>
 
-          <Button
-            size="lg"
-            className="h-12 text-base"
-            disabled={saving}
-            onClick={handleSubmit}
-          >
-            {saving ? "Creando…" : "Crear grupo"}
-          </Button>
+          {/* Acción / confirmaciones */}
+          {step === "form" && (
+            <Button
+              size="lg"
+              className="h-12 text-base"
+              onClick={onCreatePressed}
+            >
+              Crear grupo
+            </Button>
+          )}
+
+          {step === "confirm-empty" && (
+            <div className="flex flex-col gap-2 rounded-2xl border bg-muted/40 p-4">
+              <p className="text-sm font-medium">
+                No agregaste ningún miembro. ¿Querés agregar uno?
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="h-11 flex-1"
+                  onClick={() => {
+                    setStep("form");
+                    setTimeout(() => memberRef.current?.focus(), 50);
+                  }}
+                >
+                  Añadir
+                </Button>
+                <Button
+                  className="h-11 flex-1 bg-[var(--color-pos)] text-white hover:opacity-90"
+                  disabled={saving}
+                  onClick={doCreate}
+                >
+                  {saving ? "Creando…" : "Continuar"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === "confirm-ready" && (
+            <div className="flex flex-col gap-2 rounded-2xl border bg-muted/40 p-4">
+              <p className="text-sm font-medium">
+                ¿Desea crear el grupo con {memberList.length} miembro
+                {memberList.length === 1 ? "" : "s"}?
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="h-11 flex-1"
+                  onClick={() => setStep("form")}
+                >
+                  Volver
+                </Button>
+                <Button
+                  className="h-11 flex-1 bg-[var(--color-pos)] text-white hover:opacity-90"
+                  disabled={saving}
+                  onClick={doCreate}
+                >
+                  {saving ? "Creando…" : "Crear grupo"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

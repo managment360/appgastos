@@ -62,6 +62,12 @@ export async function createGroup(input: CreateGroupInput) {
   return { code, name: data.name, icon: data.icon };
 }
 
+/** Elimina el grupo y todos sus datos (cascade). Irreversible. */
+export async function deleteGroup(input: { code: string }) {
+  await db.delete(groups).where(eq(groups.code, normalizeCode(input.code)));
+  return { ok: true };
+}
+
 /** Verifica que exista un grupo por código (para "unirse"). */
 export async function findGroup(code: string) {
   const g = await getGroupByCode(normalizeCode(code));

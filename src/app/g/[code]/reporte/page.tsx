@@ -15,9 +15,14 @@ export default async function ReportPage({
   const { group, members, expenses, settlements } = data;
   const activeOrInvolved = members; // mostramos todos en el reporte
 
+  // Reporte en orden ascendente: del primer gasto cargado al último.
+  const ordered = [...expenses].sort((a, b) =>
+    a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0
+  );
+
   const report = buildReport(
     activeOrInvolved.map((m) => ({ id: m.id, name: m.name })),
-    expenses.map((e) => ({
+    ordered.map((e) => ({
       id: e.id,
       concept: e.concept,
       amount: e.amount,

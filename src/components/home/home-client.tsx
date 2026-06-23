@@ -2,12 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Plus, LogIn, Receipt, X } from "lucide-react";
+import { ChevronRight, Plus, LogIn, Receipt, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   getRecentGroups,
   forgetGroup,
   type RecentGroup,
 } from "@/lib/recent-groups";
+import { deleteGroup } from "@/app/actions/groups";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { t } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { CreateGroupSheet } from "./create-group-sheet";
@@ -21,9 +32,20 @@ export function HomeClient() {
     setRecent(getRecentGroups());
   }, []);
 
-  function forget(code: string) {
-    forgetGroup(code);
-    setRecent((prev) => prev.filter((g) => g.code !== code));
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  async function removeGroup(code: string) {
+    setDeleting(code);
+    try {
+      await deleteGroup({ code });
+      forgetGroup(code);
+      setRecent((prev) => prev.filter((g) => g.code !== code));
+      toast.success("Grupo eliminado");
+    } catch {
+      toast.error("No se pudo eliminar el grupo.");
+    } finally {
+      setDeleting(null);
+    }
   }
 
   return (
@@ -77,13 +99,44 @@ export function HomeClient() {
                   </span>
                   <ChevronRight className="size-5 text-muted-foreground" />
                 </button>
-                <button
-                  onClick={() => forget(g.code)}
-                  aria-label="Quitar de la lista"
-                  className="mr-2 flex size-8 items-center justify-center rounded-full text-muted-foreground transition active:bg-muted"
-                >
-                  <X className="size-4" />
-                </button>
+                <Dialog>
+                  <DialogTrigger
+                    render={
+                      <button
+                        aria-label="Eliminar grupo"
+                        className="mr-2 flex size-9 items-center justify-center rounded-full text-[var(--color-neg)] transition active:bg-neg-soft"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    }
+                  />
+                  <DialogContent className="max-w-xs rounded-2xl">
+                    <DialogHeader>
+                      <DialogTitle>¿Eliminar grupo?</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground">
+                      Se elimina <strong>{g.name}</strong> y{" "}
+                      <strong>todos sus datos</strong> (gastos, miembros, saldos)
+                      para todos los integrantes. Esta acción no se puede deshacer.
+                    </p>
+                    <DialogFooter className="flex-row justify-end gap-2">
+                      <DialogClose
+                        render={<Button variant="outline">Cancelar</Button>}
+                      />
+                      <DialogClose
+                        render={
+                          <Button
+                            variant="destructive"
+                            disabled={deleting === g.code}
+                            onClick={() => removeGroup(g.code)}
+                          >
+                            Eliminar grupo
+                          </Button>
+                        }
+                      />
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </li>
             ))}
           </ul>

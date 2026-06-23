@@ -95,13 +95,13 @@ export function ExpensesView({
       {expenses.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="flex flex-col gap-4 px-4 py-4">
+        <div className="flex flex-col gap-3 px-4 py-4">
           {groupsByDate.map(([date, items]) => (
             <section key={date}>
-              <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <h3 className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {formatDateLong(date === "Sin fecha" ? null : date)}
               </h3>
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-1.5">
                 {items.map((e) => (
                   <ExpenseCard
                     key={e.id}

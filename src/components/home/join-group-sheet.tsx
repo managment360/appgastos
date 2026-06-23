@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -22,6 +22,10 @@ export function JoinGroupSheet({ trigger }: { trigger: ReactElement }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) setCode("");
+  }, [open]);
 
   async function handleJoin() {
     const c = normalizeCode(code);
