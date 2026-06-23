@@ -2,7 +2,8 @@
  * Lecturas a la base. Server-only. Async (Postgres / postgres-js).
  */
 import "server-only";
-import { eq, asc, desc } from "drizzle-orm";
+import { cache } from "react";
+import { eq, asc, desc, inArray } from "drizzle-orm";
 import { db } from "./index";
 import {
   groups,
@@ -22,63 +23,84 @@ import {
 } from "./schema";
 import { normalizeCode } from "@/lib/ids";
 
-export async function getGroupByCode(code: string): Promise<Group | undefined> {
-  const rows = await db
-    .select()
-    .from(groups)
-    .where(eq(groups.code, normalizeCode(code)))
-    .limit(1);
-  return rows[0];
-}
+export const getGroupByCode = cache(
+  async (code: string): Promise<Group | undefined> => {
+    const rows = await db
+      .select()
+      .from(groups)
+      .where(eq(groups.code, normalizeCode(code)))
+      .limit(1);
+    return rows[0];
+  }
+);
 
-export async function getMembers(groupId: string): Promise<Member[]> {
-  return db
-    .select()
-    .from(members)
-    .where(eq(members.groupId, groupId))
-    .orderBy(asc(members.createdAt));
-}
+export const getMembers = cache(
+  async (groupId: string): Promise<Member[]> => {
+    return db
+      .select()
+      .from(members)
+      .where(eq(members.groupId, groupId))
+      .orderBy(asc(members.createdAt));
+  }
+);
 
 export type ExpenseWithDetails = Expense & {
   payers: ExpensePayer[];
   shares: ExpenseShare[];
 };
 
-export async function getExpenses(
+export const getExpenses = cache(async (
   groupId: string
-): Promise<ExpenseWithDetails[]> {
+): Promise<ExpenseWithDetails[]> => {
   const rows = await db
     .select()
     .from(expenses)
     .where(eq(expenses.groupId, groupId))
     .orderBy(desc(expenses.expenseDate), desc(expenses.createdAt));
 
-  return Promise.all(
-    rows.map(async (e) => ({
-      ...e,
-      payers: await db
-        .select()
-        .from(expensePayers)
-        .where(eq(expensePayers.expenseId, e.id)),
-      shares: await db
-        .select()
-        .from(expenseShares)
-        .where(eq(expenseShares.expenseId, e.id)),
-    }))
-  );
-}
+  if (rows.length === 0) return [];
 
-export async function getSettlements(groupId: string): Promise<Settlement[]> {
-  return db.select().from(settlements).where(eq(settlements.groupId, groupId));
-}
+  // Una sola consulta para TODOS los pagadores y otra para TODAS las shares
+  // (evita el N+1: 3 consultas en vez de 1 + 2·N).
+  const ids = rows.map((e) => e.id);
+  const [payers, shares] = await Promise.all([
+    db.select().from(expensePayers).where(inArray(expensePayers.expenseId, ids)),
+    db.select().from(expenseShares).where(inArray(expenseShares.expenseId, ids)),
+  ]);
 
-export async function getNotes(groupId: string): Promise<Note[]> {
+  const payersByExpense = new Map<string, ExpensePayer[]>();
+  for (const p of payers) {
+    const arr = payersByExpense.get(p.expenseId);
+    if (arr) arr.push(p);
+    else payersByExpense.set(p.expenseId, [p]);
+  }
+  const sharesByExpense = new Map<string, ExpenseShare[]>();
+  for (const s of shares) {
+    const arr = sharesByExpense.get(s.expenseId);
+    if (arr) arr.push(s);
+    else sharesByExpense.set(s.expenseId, [s]);
+  }
+
+  return rows.map((e) => ({
+    ...e,
+    payers: payersByExpense.get(e.id) ?? [],
+    shares: sharesByExpense.get(e.id) ?? [],
+  }));
+});
+
+export const getSettlements = cache(
+  async (groupId: string): Promise<Settlement[]> => {
+    return db.select().from(settlements).where(eq(settlements.groupId, groupId));
+  }
+);
+
+export const getNotes = cache(async (groupId: string): Promise<Note[]> => {
   return db
     .select()
     .from(notes)
     .where(eq(notes.groupId, groupId))
     .orderBy(desc(notes.createdAt));
-}
+});
 
 export type GroupFull = {
   group: Group;
