@@ -23,6 +23,8 @@ export function ReportView({
   const [exporting, setExporting] = useState(false);
   const sentDate = todayISO();
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? "?";
+  const aliasOf = (id: string) =>
+    members.find((m) => m.id === id)?.aliasCbu ?? null;
   const symbol = group.currency === "ARS" ? "$" : `${group.currency} `;
 
   async function exportPng() {
@@ -51,22 +53,36 @@ export function ReportView({
   }
 
   function summaryText(): string {
-    const lines: string[] = [`🧾 ${group.name} — Detalle de Gastos y Deudas`, ""];
-    lines.push("Saldos:");
+    const total = report.rows.reduce((a, r) => a + r.amount, 0);
+    const lines: string[] = [
+      `🧾 *${group.name}* — Detalle de Gastos y Deudas`,
+      `Total gastado: ${symbol}${formatCents(total)}`,
+      "",
+      "💰 *Saldos de cada uno*",
+    ];
     for (const m of report.members) {
       const net = report.totals[m.id] ?? 0;
-      const tag = net > 0 ? "le deben" : net < 0 ? "debe" : "a mano";
-      lines.push(
-        `• ${m.name}: ${net === 0 ? "a mano" : `${symbol}${formatCents(Math.abs(net))} (${tag})`}`
-      );
+      if (net > 0)
+        lines.push(`• ${m.name}: ${symbol}${formatCents(net)} a favor (le deben)`);
+      else if (net < 0)
+        lines.push(`• ${m.name}: debe ${symbol}${formatCents(-net)}`);
+      else lines.push(`• ${m.name}: al día`);
     }
     if (report.adjustments.length) {
-      lines.push("", "Pagos para ajuste:");
+      lines.push("", "🔄 *Para saldar* (quién le transfiere a quién)");
       for (const a of report.adjustments) {
+        const alias = aliasOf(a.toMemberId);
         lines.push(
-          `• ${nameOf(a.fromMemberId)} → ${nameOf(a.toMemberId)}: ${symbol}${formatCents(a.amount)}`
+          `• ${nameOf(a.fromMemberId)} le paga a ${nameOf(a.toMemberId)}: ${symbol}${formatCents(a.amount)}`
+        );
+        lines.push(
+          alias
+            ? `   📋 Alias de ${nameOf(a.toMemberId)}: ${alias}`
+            : `   (${nameOf(a.toMemberId)} no cargó alias)`
         );
       }
+    } else {
+      lines.push("", "✅ Están todos a mano, no hacen falta transferencias.");
     }
     return lines.join("\n");
   }
