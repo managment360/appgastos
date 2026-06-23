@@ -11,9 +11,10 @@ const NAVY_SOFT = "#22375c";
 const GREEN = "#1f8a4c";
 const RED = "#c0392b";
 const SKY = "#c7dcef";
-const LINE = "#8aa0bd"; // líneas internas (más oscuras que antes)
 const GROUP = "#15253f"; // separador fuerte ENTRE miembros (navy)
 const MUTED = "#5f718c";
+const TINT = "#eef3f9"; // fondo claro de cada celda de monto
+const WHITE = "#ffffff"; // líneas blancas que dividen cada monto
 
 export function ReportTable({
   report,
@@ -41,15 +42,17 @@ export function ReportTable({
   );
   const grandTotal = rows.reduce((a, r) => a + r.amount, 0);
 
-  const border = `1px solid ${LINE}`;
-  const groupBorder = `2px solid ${GROUP}`;
+  // Líneas blancas de 2px dividen cada celda; el separador entre miembros (navy,
+  // 3px) gana sobre la blanca al ser más grueso.
+  const border = `2px solid ${WHITE}`;
+  const groupBorder = `3px solid ${GROUP}`;
 
   const th: React.CSSProperties = {
     background: NAVY,
     color: "#fff",
     fontWeight: 600,
     padding: "7px 9px",
-    border,
+    border: `2px solid ${NAVY_SOFT}`,
     whiteSpace: "nowrap",
   };
   const sub: React.CSSProperties = {
@@ -57,13 +60,14 @@ export function ReportTable({
     color: "#fff",
     fontWeight: 600,
     padding: "5px 9px",
-    border,
+    border: `2px solid ${NAVY}`,
     fontSize: "11px",
     textAlign: "center",
   };
   const td: React.CSSProperties = {
     padding: "6px 9px",
     border,
+    background: TINT,
     textAlign: "right",
     whiteSpace: "nowrap",
     fontVariantNumeric: "tabular-nums",
@@ -73,7 +77,7 @@ export function ReportTable({
     ...td,
     background: SKY,
     fontWeight: 700,
-    borderTop: `2px solid ${NAVY}`,
+    borderTop: `3px solid ${NAVY}`,
   };
 
   // Bordes que marcan el inicio de cada miembro (separador fuerte).
@@ -138,11 +142,8 @@ export function ReportTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, ri) => (
-            <tr
-              key={r.expenseId}
-              style={ri % 2 ? { background: "#f6f9fc" } : undefined}
-            >
+          {rows.map((r) => (
+            <tr key={r.expenseId}>
               <td style={{ ...tdL, fontWeight: 600 }}>{r.concept}</td>
               <td style={td}>
                 {symbol}
