@@ -47,9 +47,51 @@ export function ReportView({
     }
   }
 
-  function exportPdf() {
-    // Impresión nativa: PDF vectorial nítido, A4, márgenes mínimos (ver globals.css).
-    window.print();
+  async function exportPdf() {
+    const node = document.getElementById("reporte-print");
+    if (!node) return;
+    setExporting(true);
+    try {
+      const [{ toPng }, { jsPDF }] = await Promise.all([
+        import("html-to-image"),
+        import("jspdf"),
+      ]);
+      // Capturamos la tabla COMPLETA (aunque en pantalla esté con scroll).
+      const dataUrl = await toPng(node, {
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+      });
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise<void>((res, rej) => {
+        img.onload = () => res();
+        img.onerror = () => rej(new Error("img"));
+      });
+
+      // A4 en la orientación que mejor aproveche, y escalado para que ENTRE TODO.
+      const landscape = img.width >= img.height;
+      const pdf = new jsPDF({
+        orientation: landscape ? "landscape" : "portrait",
+        unit: "pt",
+        format: "a4",
+      });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 14; // márgenes mínimos
+      const ratio = Math.min(
+        (pageW - margin * 2) / img.width,
+        (pageH - margin * 2) / img.height
+      );
+      const w = img.width * ratio;
+      const h = img.height * ratio;
+      pdf.addImage(dataUrl, "PNG", (pageW - w) / 2, margin, w, h);
+      pdf.save(`reporte-${group.code}.pdf`);
+      toast.success("PDF descargado");
+    } catch {
+      toast.error("No se pudo generar el PDF.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   function summaryText(): string {
@@ -102,7 +144,7 @@ export function ReportView({
           onClick={exportPdf}
         >
           <FileText className="size-5" />
-          PDF / Imprimir
+          PDF
         </Button>
         <Button
           variant="outline"
