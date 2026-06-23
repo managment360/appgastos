@@ -122,7 +122,7 @@ export function ExpensesView({
 
       {/* FAB de gasto — chico, abajo a la izquierda, solo "+" (solo en Gastos y si puede editar) */}
       {canEdit && (
-        <div className="no-print pointer-events-none fixed inset-x-0 bottom-[84px] z-30 mx-auto flex w-full max-w-md justify-start px-4">
+        <div className="no-print pointer-events-none fixed inset-x-0 bottom-28 z-30 mx-auto flex w-full max-w-md justify-end px-4">
           <ExpenseSheet
             groupCode={group.code}
             members={activeMembers}
@@ -151,7 +151,7 @@ function EmptyState() {
       <h3 className="text-lg font-semibold">Todavía no hay gastos</h3>
       <p className="max-w-xs text-base text-muted-foreground">
         Tocá el botón <span className="font-semibold text-gold">＋</span> (abajo a
-        la izquierda) para cargar el primero. La app hace las cuentas.
+        la derecha) para cargar el primero. La app hace las cuentas.
       </p>
       <Receipt className="size-5 text-muted-foreground" />
     </div>
