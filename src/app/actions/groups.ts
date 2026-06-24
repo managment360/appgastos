@@ -5,12 +5,54 @@ import { z } from "zod";
 import { db } from "@/db";
 import { groups, members } from "@/db/schema";
 import { newId, newGroupCode, normalizeCode } from "@/lib/ids";
-import { getGroupByCode } from "@/db/queries";
+import { getGroupByCode, getGroupFull } from "@/db/queries";
+import { computeBalances } from "@/lib/balances";
 import { revalidatePath } from "next/cache";
+
+export type HomeSummary = {
+  code: string;
+  found: boolean;
+  name?: string;
+  photo?: string | null;
+  currency?: string;
+  net?: number;
+};
+
+/** Resumen por grupo para la home: nombre, foto, moneda y saldo del miembro. */
+export async function getHomeSummaries(
+  items: { code: string; memberId: string | null }[]
+): Promise<HomeSummary[]> {
+  const out: HomeSummary[] = [];
+  for (const it of items) {
+    const data = await getGroupFull(it.code);
+    if (!data) {
+      out.push({ code: it.code, found: false });
+      continue;
+    }
+    const balances = computeBalances(
+      data.members.map((m) => m.id),
+      data.expenses,
+      data.settlements
+    );
+    const net = it.memberId
+      ? balances.find((b) => b.memberId === it.memberId)?.net ?? 0
+      : 0;
+    out.push({
+      code: data.group.code,
+      found: true,
+      name: data.group.name,
+      photo: data.group.photo,
+      currency: data.group.currency,
+      net,
+    });
+  }
+  return out;
+}
 
 const createSchema = z.object({
   name: z.string().trim().min(1, "Poné un nombre al grupo.").max(60),
   icon: z.string().min(1).default("🧾"),
+  photo: z.string().max(3_000_000).nullable().optional(),
   description: z.string().trim().max(200).optional(),
   currency: z.string().min(1).default("ARS"),
   /** Miembros iniciales (opcional), con flag de administrador. */
@@ -42,6 +84,7 @@ export async function createGroup(input: CreateGroupInput) {
     code,
     name: data.name,
     icon: data.icon,
+    photo: data.photo ?? null,
     description: data.description,
     currency: data.currency,
     status: "active",

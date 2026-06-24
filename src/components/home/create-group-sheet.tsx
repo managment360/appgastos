@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X, Plus, Star } from "lucide-react";
+import { X, Plus, Star, Camera } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,20 +14,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GROUP_ICONS } from "@/lib/i18n";
 import { CURRENCIES } from "@/lib/currencies";
 import { createGroup } from "@/app/actions/groups";
 import { rememberGroup } from "@/lib/recent-groups";
 import { cn, scrollIntoCenter } from "@/lib/utils";
+import { fileToResizedDataUrl } from "@/lib/image";
 
 type Step = "form" | "confirm-empty" | "confirm-ready";
 
 export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   const router = useRouter();
   const memberRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState<string>(GROUP_ICONS[0]);
+  const [photo, setPhoto] = useState<string | null>(null);
   const [currency, setCurrency] = useState("ARS");
   const [memberInput, setMemberInput] = useState("");
   const [memberList, setMemberList] = useState<
@@ -40,13 +41,22 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   useEffect(() => {
     if (open) {
       setName("");
-      setIcon(GROUP_ICONS[0]);
+      setPhoto(null);
       setCurrency("ARS");
       setMemberInput("");
       setMemberList([]);
       setStep("form");
     }
   }, [open]);
+
+  async function onPickFile(file: File | undefined) {
+    if (!file) return;
+    try {
+      setPhoto(await fileToResizedDataUrl(file, 1000, 0.72));
+    } catch {
+      toast.error("No se pudo procesar la imagen.");
+    }
+  }
 
   function addMember() {
     const n = memberInput.trim();
@@ -76,7 +86,7 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   async function doCreate() {
     setSaving(true);
     try {
-      const res = await createGroup({ name, icon, currency, members: memberList });
+      const res = await createGroup({ name, photo, currency, members: memberList });
       rememberGroup({ code: res.code, name: res.name, icon: res.icon });
       toast.success(`Grupo creado: ${res.code}`);
       router.push(`/g/${res.code}`);
@@ -99,26 +109,51 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
         </SheetHeader>
 
         <div className="flex flex-col gap-5 px-5 pb-6">
-          {/* Ícono */}
+          {/* Foto del grupo (opcional) */}
           <div className="flex flex-col gap-2">
-            <Label>Seleccioná un ícono que identifique al grupo</Label>
-            <div className="flex flex-wrap gap-2">
-              {GROUP_ICONS.map((emo) => (
-                <button
-                  key={emo}
+            <Label>Foto del grupo (opcional)</Label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="relative size-16 shrink-0 overflow-hidden rounded-full border bg-muted"
+                aria-label="Agregar foto"
+              >
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo} alt="" className="size-full object-cover" />
+                ) : (
+                  <span className="flex size-full items-center justify-center text-muted-foreground">
+                    <Camera className="size-6" />
+                  </span>
+                )}
+              </button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10"
+                onClick={() => fileRef.current?.click()}
+              >
+                {photo ? "Cambiar foto" : "Agregar foto"}
+              </Button>
+              {photo && (
+                <Button
                   type="button"
-                  onClick={() => setIcon(emo)}
-                  className={cn(
-                    "flex size-10 items-center justify-center rounded-xl border text-xl transition",
-                    icon === emo
-                      ? "border-primary bg-primary/10 ring-2 ring-primary/40"
-                      : "bg-card"
-                  )}
+                  variant="ghost"
+                  className="h-10"
+                  onClick={() => setPhoto(null)}
                 >
-                  {emo}
-                </button>
-              ))}
+                  Quitar
+                </Button>
+              )}
             </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => onPickFile(e.target.files?.[0])}
+            />
           </div>
 
           {/* Nombre */}
