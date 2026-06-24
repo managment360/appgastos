@@ -35,10 +35,11 @@ export const t = {
 export const CATEGORIES = [
   { key: "comida", label: "Comida", icon: "🍽️" },
   { key: "carne", label: "Carne", icon: "🥩" },
+  { key: "verdura", label: "Verdura", icon: "🥬" },
+  { key: "postre", label: "Postre", icon: "🍰" },
   { key: "bebida", label: "Bebida", icon: "🥤" },
-  { key: "super", label: "Super", icon: "🛒" },
-  { key: "verdura", label: "Verdura", icon: "🥗" },
   { key: "pan", label: "Panadería", icon: "🥖" },
+  { key: "super", label: "Super", icon: "🛒" },
   { key: "transporte", label: "Transporte", icon: "🚗" },
   { key: "alojamiento", label: "Alojamiento", icon: "🏠" },
   { key: "entradas", label: "Entradas", icon: "🎟️" },

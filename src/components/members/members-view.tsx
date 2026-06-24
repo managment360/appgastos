@@ -65,7 +65,7 @@ export function MembersView({
             group={group}
             trigger={
               <Button size="sm" className="h-9 gap-1">
-                <Plus className="size-4" /> Agregar
+                <Plus className="size-4" /> Agregar miembro
               </Button>
             }
           />
@@ -213,52 +213,60 @@ function MemberMenu({
             {member.isAdmin ? "Quitar administrador" : "Hacer administrador"}
           </button>
 
-          {/* Eliminar (solo si no tiene movimientos) */}
-          <Dialog>
-            <DialogTrigger
-              render={
-                <button className="flex items-center gap-2 rounded-xl px-3 py-3 text-left text-destructive transition active:bg-destructive/10">
-                  <Trash2 className="size-4" /> Eliminar
-                </button>
-              }
-            />
-            <DialogContent className="max-w-xs rounded-2xl">
-              <DialogHeader>
-                <DialogTitle>Eliminar a {member.name}</DialogTitle>
-              </DialogHeader>
-              {hasActivity ? (
-                <p className="text-sm text-muted-foreground">
-                  {member.name} tiene gastos cargados. Si lo eliminás, se borran
-                  sus pagos y participaciones, lo que cambia las cuentas.
-                  Conviene <strong>desactivarlo</strong> en su lugar.
-                </p>
-              ) : (
+          {/* Eliminar: solo si NO tiene gastos. Si tiene, hay que desactivarlo. */}
+          {hasActivity ? (
+            <p className="rounded-xl bg-muted/60 px-3 py-3 text-xs text-muted-foreground">
+              {member.name} tiene gastos cargados, no se puede eliminar. Usá{" "}
+              <strong>Desactivar</strong> (deja de sumarse a gastos nuevos pero se
+              conservan las cuentas).
+            </p>
+          ) : (
+            <Dialog>
+              <DialogTrigger
+                render={
+                  <button className="flex items-center gap-2 rounded-xl px-3 py-3 text-left text-destructive transition active:bg-destructive/10">
+                    <Trash2 className="size-4" /> Eliminar
+                  </button>
+                }
+              />
+              <DialogContent className="max-w-xs rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle>Eliminar a {member.name}</DialogTitle>
+                </DialogHeader>
                 <p className="text-sm text-muted-foreground">
                   No tiene movimientos. Se puede eliminar sin afectar las cuentas.
                 </p>
-              )}
-              <DialogFooter className="flex-row justify-end gap-2">
-                <DialogClose render={<Button variant="outline">Cancelar</Button>} />
-                <DialogClose
-                  render={
-                    <Button
-                      variant="destructive"
-                      onClick={async () => {
-                        await deleteMember({
-                          id: member.id,
-                          groupCode: group.code,
-                        });
-                        toast.success("Miembro eliminado");
-                        onChanged();
-                      }}
-                    >
-                      Eliminar igual
-                    </Button>
-                  }
-                />
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter className="flex-row justify-end gap-2">
+                  <DialogClose
+                    render={<Button variant="outline">Cancelar</Button>}
+                  />
+                  <DialogClose
+                    render={
+                      <Button
+                        variant="destructive"
+                        onClick={async () => {
+                          try {
+                            await deleteMember({
+                              id: member.id,
+                              groupCode: group.code,
+                            });
+                            toast.success("Miembro eliminado");
+                            onChanged();
+                          } catch (e) {
+                            toast.error(
+                              e instanceof Error ? e.message : "No se pudo eliminar."
+                            );
+                          }
+                        }}
+                      >
+                        Eliminar
+                      </Button>
+                    }
+                  />
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -294,6 +302,7 @@ function MemberSheet({
 
   async function save() {
     if (!name.trim()) return toast.error("El nombre es obligatorio.");
+    if (!phone.trim()) return toast.error("El teléfono es obligatorio.");
     setSaving(true);
     try {
       if (member) {
@@ -347,12 +356,13 @@ function MemberSheet({
             />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Teléfono">
+            <Field label="Teléfono *">
               <Input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="opcional"
+                placeholder="Ej. 11 5555 5555"
                 inputMode="tel"
+                onFocus={scrollIntoCenter}
               />
             </Field>
             <Field label="Email">

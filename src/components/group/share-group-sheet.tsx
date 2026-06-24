@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import QRCode from "qrcode";
 import { Share2, Copy, Check, MessageCircle, Link2 } from "lucide-react";
 import type { Group } from "@/db/schema";
 import {
@@ -21,6 +22,20 @@ import {
 
 export function ShareGroupSheet({ group }: { group: Group }) {
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
+  const [open, setOpen] = useState(false);
+  const [qr, setQr] = useState<string>("");
+
+  // Genera el QR del link del grupo al abrir.
+  useEffect(() => {
+    if (!open) return;
+    QRCode.toDataURL(groupUrl(group.code), {
+      width: 320,
+      margin: 1,
+      color: { dark: "#15253f", light: "#ffffff" },
+    })
+      .then(setQr)
+      .catch(() => setQr(""));
+  }, [open, group.code]);
 
   async function copy(kind: "code" | "link") {
     const value = kind === "code" ? group.code : groupUrl(group.code);
@@ -35,7 +50,7 @@ export function ShareGroupSheet({ group }: { group: Group }) {
   }
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
           <button
@@ -51,6 +66,20 @@ export function ShareGroupSheet({ group }: { group: Group }) {
           <SheetTitle className="text-xl">Compartir grupo</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col gap-4 px-5 pb-8 pt-2">
+          {/* QR del grupo */}
+          {qr && (
+            <div className="flex flex-col items-center gap-1">
+              <img
+                src={qr}
+                alt="QR del grupo"
+                className="size-44 rounded-2xl border bg-white p-2"
+              />
+              <span className="text-xs text-muted-foreground">
+                Escaneá para unirte al grupo
+              </span>
+            </div>
+          )}
+
           {/* Código grande */}
           <button
             onClick={() => copy("code")}

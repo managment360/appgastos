@@ -45,12 +45,6 @@ export type ExpenseInitial = {
   }[];
 };
 
-// Solo dos formas de dividir: igual o por partes.
-const SPLIT_TABS: { key: SplitType; label: string }[] = [
-  { key: "equal", label: "Igual" },
-  { key: "units", label: "Partes" },
-];
-
 export function ExpenseSheet({
   groupCode,
   members,
@@ -74,9 +68,8 @@ export function ExpenseSheet({
   const [concept, setConcept] = useState(initial?.concept ?? "");
   const [date, setDate] = useState(initial?.expenseDate ?? todayISO());
   const [category, setCategory] = useState<string>(initial?.category ?? "");
-  const [splitType, setSplitType] = useState<SplitType>(
-    initial?.splitType === "units" ? "units" : "equal"
-  );
+  // La división siempre es igualitaria entre los participantes.
+  const splitType: SplitType = "equal";
   const [saving, setSaving] = useState(false);
 
   const [multiPayer, setMultiPayer] = useState((initial?.payers.length ?? 0) > 1);
@@ -95,13 +88,6 @@ export function ExpenseSheet({
         initial ? initial.shares.map((s) => s.memberId) : members.map((m) => m.id)
       )
   );
-  const [units, setUnits] = useState<Record<string, string>>(() => {
-    const m: Record<string, string> = {};
-    initial?.shares.forEach((s) => {
-      if (s.weight != null) m[s.memberId] = String(s.weight);
-    });
-    return m;
-  });
 
   // Al abrir un gasto NUEVO, arrancar siempre con campos vacíos.
   useEffect(() => {
@@ -110,12 +96,10 @@ export function ExpenseSheet({
       setConcept("");
       setDate(todayISO());
       setCategory("");
-      setSplitType("equal");
       setMultiPayer(false);
       setSinglePayer("");
       setPayerAmounts({});
       setParticipants(new Set(members.map((m) => m.id)));
-      setUnits({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -134,11 +118,8 @@ export function ExpenseSheet({
   const participantInputs = useMemo(() => {
     return activeMembers
       .filter((m) => participants.has(m.id))
-      .map((m) => ({
-        memberId: m.id,
-        weight: units[m.id] != null && units[m.id] !== "" ? Number(units[m.id]) : 1,
-      }));
-  }, [activeMembers, participants, units]);
+      .map((m) => ({ memberId: m.id, weight: 1 }));
+  }, [activeMembers, participants]);
 
   const preview = useMemo(() => {
     if (totalCents <= 0) return new Map<string, number>();
@@ -181,7 +162,7 @@ export function ExpenseSheet({
       payers,
       participants: participantInputs.map((p) => ({
         memberId: p.memberId,
-        weight: splitType === "units" ? p.weight : null,
+        weight: null,
         percent: null,
         fixedAmount: null,
       })),
@@ -346,20 +327,8 @@ export function ExpenseSheet({
               <Label className="flex items-center gap-1">
                 <Users className="size-4" /> Participan ({participantCount})
               </Label>
-              {/* Segmento Ninguno / Todos */}
+              {/* Segmento Todos / Algunos */}
               <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-0.5 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setParticipants(new Set())}
-                  className={cn(
-                    "rounded-md px-3 py-1 font-semibold transition",
-                    participantCount === 0
-                      ? "bg-background shadow-sm"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  Ninguno
-                </button>
                 <button
                   type="button"
                   onClick={() =>
@@ -372,27 +341,22 @@ export function ExpenseSheet({
                 >
                   Todos
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setParticipants(new Set())}
+                  className={cn(
+                    "rounded-md px-3 py-1 font-semibold transition",
+                    !allSelected ? "bg-background shadow-sm" : "text-muted-foreground"
+                  )}
+                >
+                  Algunos
+                </button>
               </div>
             </div>
 
-            {/* Tabs de tipo de división: Igual / Partes */}
-            <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
-              {SPLIT_TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setSplitType(tab.key)}
-                  className={cn(
-                    "rounded-lg py-1.5 text-sm font-medium transition",
-                    splitType === tab.key
-                      ? "bg-background shadow-sm"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            <p className="px-1 text-xs text-muted-foreground">
+              El gasto se divide en partes iguales entre los que participan.
+            </p>
 
             <ul className="flex flex-col gap-1.5 pt-1">
               {activeMembers.map((m) => {
@@ -420,22 +384,10 @@ export function ExpenseSheet({
                     </button>
                     <span className="flex-1 text-sm">{m.name}</span>
 
-                    {on && splitType === "equal" && (
+                    {on && (
                       <span className="text-sm tabular text-muted-foreground">
                         ${formatCents(toca)}
                       </span>
-                    )}
-                    {on && splitType === "units" && (
-                      <Input
-                        inputMode="numeric"
-                        placeholder="1"
-                        value={units[m.id] ?? ""}
-                        onChange={(e) =>
-                          setUnits((p) => ({ ...p, [m.id]: e.target.value }))
-                        }
-                        onFocus={scrollIntoCenter}
-                        className="h-8 w-16 text-right tabular"
-                      />
                     )}
                   </li>
                 );
@@ -455,7 +407,7 @@ export function ExpenseSheet({
             disabled={saving}
             onClick={handleSubmit}
           >
-            {saving ? "Guardando…" : initial ? "Guardar cambios" : "Agregar gasto"}
+            {saving ? "Guardando…" : initial ? "Guardar cambios" : "Confirmar gasto"}
           </Button>
         </div>
       </SheetContent>

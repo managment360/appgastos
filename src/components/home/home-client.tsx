@@ -23,6 +23,7 @@ import { t } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { CreateGroupSheet } from "./create-group-sheet";
 import { JoinGroupSheet } from "./join-group-sheet";
+import { TextSizeControl } from "@/components/text-size-control";
 
 export function HomeClient() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export function HomeClient() {
         <div className="flex size-11 items-center justify-center rounded-xl bg-[var(--color-navy)] text-xl text-white">
           🧾
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-bold leading-tight tracking-tight">
             {t.appName}
           </h1>
@@ -63,6 +64,7 @@ export function HomeClient() {
             La app hace las cuentas.
           </p>
         </div>
+        <TextSizeControl />
       </div>
 
       {/* Grupos recientes */}

@@ -13,7 +13,7 @@ import { pgTable, text, integer, real, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export type SplitType = "equal" | "custom_amount" | "percent" | "units";
-export type GroupStatus = "active" | "closed";
+export type GroupStatus = "active" | "pending_close" | "closed";
 export type SettlementStatus = "pending" | "paid";
 
 export const groups = pgTable("groups", {

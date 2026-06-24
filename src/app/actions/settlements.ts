@@ -53,13 +53,14 @@ export async function unmarkTransfer(input: {
 
 export async function setGroupStatus(input: {
   groupCode: string;
-  status: "active" | "closed";
+  status: "active" | "pending_close" | "closed";
 }) {
   await db
     .update(groups)
     .set({ status: input.status })
     .where(eq(groups.code, input.groupCode));
   revalidateSettle(input.groupCode);
+  revalidatePath(`/g/${input.groupCode}/reporte`);
   return { ok: true };
 }
 

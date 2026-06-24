@@ -1,4 +1,5 @@
 import type { ReportModel } from "@/lib/report";
+import type { GroupStatus } from "@/db/schema";
 import { formatCents } from "@/lib/money";
 import { formatDateShort } from "@/lib/dates";
 
@@ -23,12 +24,14 @@ export function ReportTable({
   groupIcon,
   currency,
   sentDate,
+  status,
 }: {
   report: ReportModel;
   groupName: string;
   groupIcon?: string;
   currency: string;
   sentDate: string;
+  status: GroupStatus;
 }) {
   const { members, rows } = report;
   const symbol = currency === "ARS" ? "$" : `${currency} `;
@@ -106,7 +109,18 @@ export function ReportTable({
         </h2>
         <p style={{ fontSize: 14, fontWeight: 600, color: NAVY, margin: "2px 0 0" }}>
           Detalle de Gastos y Deudas
+          {status === "pending_close"
+            ? " — PENDIENTE DE CIERRE"
+            : status === "closed"
+              ? " — CUENTA CERRADA"
+              : ""}
         </p>
+        {status === "pending_close" && (
+          <p style={{ fontSize: 12, color: RED, margin: "2px 0 0", fontWeight: 600 }}>
+            El administrador te pide verificar los movimientos para cerrar las
+            cuentas.
+          </p>
+        )}
         <p style={{ fontSize: 12, color: MUTED, margin: "2px 0 0" }}>
           Enviado el {formatDateShort(sentDate)}
         </p>

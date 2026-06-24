@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { groups, members } from "@/db/schema";
+import { groups, members, expensePayers, expenseShares } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { revalidatePath } from "next/cache";
 
@@ -90,7 +90,22 @@ export async function setMemberActive(input: {
 }
 
 export async function deleteMember(input: { id: string; groupCode: string }) {
-  // Cascade borra payers/shares de ese miembro.
+  // No permitir eliminar si participa o pagó algún gasto (hay que reasignar primero).
+  const [pay] = await db
+    .select({ id: expensePayers.id })
+    .from(expensePayers)
+    .where(eq(expensePayers.memberId, input.id))
+    .limit(1);
+  const [sh] = await db
+    .select({ id: expenseShares.id })
+    .from(expenseShares)
+    .where(eq(expenseShares.memberId, input.id))
+    .limit(1);
+  if (pay || sh) {
+    throw new Error(
+      "No se puede eliminar: el miembro tiene gastos. Desactivalo en su lugar."
+    );
+  }
   await db.delete(members).where(eq(members.id, input.id));
   revalidatePath(`/g/${input.groupCode}/miembros`);
   revalidatePath(`/g/${input.groupCode}`);

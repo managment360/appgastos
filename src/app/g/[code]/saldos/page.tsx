@@ -36,16 +36,16 @@ export default async function BalancesPage({
 
       <h2 className="mt-1 px-1 text-lg font-bold">Balance por miembro</h2>
 
-      <ul className="flex flex-col gap-3">
+      <ul className="flex flex-col gap-2">
         {sorted.map((b) => {
           const positive = b.net > 0;
           const settled = b.net === 0;
           return (
             <li
               key={b.memberId}
-              className="overflow-hidden rounded-2xl border bg-card shadow-sm"
+              className="overflow-hidden rounded-xl border border-[#94a3b8] bg-card shadow-sm"
             >
-              <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-2.5">
+              <div className="flex items-center justify-between border-b border-[#cdd6e3] bg-muted/40 px-4 py-1.5">
                 <span className="text-base font-bold">
                   {nameOf(b.memberId)}
                 </span>
@@ -66,7 +66,7 @@ export default async function BalancesPage({
                       : `A pagar ${formatMoney(-b.net, group.currency)}`}
                 </span>
               </div>
-              <div className="grid grid-cols-2 divide-x">
+              <div className="grid grid-cols-2 divide-x divide-[#cdd6e3]">
                 <Stat label="Pagó" value={formatMoney(b.paid, group.currency)} />
                 <Stat
                   label="Prorrateo (le toca)"
@@ -88,7 +88,7 @@ export default async function BalancesPage({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-4 py-3">
+    <div className="px-4 py-2">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
