@@ -68,20 +68,18 @@ export function ExpenseCard({
       </span>
 
       {/* Centro */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="max-w-[45%] truncate text-sm font-semibold leading-tight">
-            {expense.concept}
-          </span>
-          <span className="min-w-0 truncate rounded-full bg-[#fde68a] px-1.5 py-0.5 text-[10px] font-semibold text-[#7c4a03]">
-            pagó: {payerNames}
-          </span>
-        </div>
-        <div className="text-xs text-muted-foreground">
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+        <span className="max-w-full truncate rounded-full bg-[#fde68a] px-1.5 py-0.5 text-[10px] font-semibold text-[#7c4a03]">
+          pagó: {payerNames}
+        </span>
+        <span className="max-w-full truncate text-sm font-semibold leading-tight">
+          {expense.concept}
+        </span>
+        <span className="text-xs text-muted-foreground">
           {myPaid > 0
             ? `Pagaste ${formatMoney(myPaid, currency)}`
             : `Total ${formatMoney(expense.amount, currency)}`}
-        </div>
+        </span>
       </div>
 
       {/* Saldo a la derecha */}
