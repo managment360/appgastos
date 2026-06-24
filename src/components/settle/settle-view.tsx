@@ -125,7 +125,7 @@ export function SettleView({
             return (
               <li
                 key={key}
-                className="overflow-hidden rounded-xl border border-[#94a3b8] bg-card shadow-sm"
+                className="overflow-hidden rounded-xl border-2 border-[#1a2740] bg-card shadow-sm"
               >
                 {/* Fila 1: quién le debe a quién + importe */}
                 <div className="flex items-center gap-2 px-4 pt-2.5">
@@ -181,7 +181,7 @@ export function SettleView({
             {paid.map((s) => (
               <li
                 key={s.id}
-                className="overflow-hidden rounded-xl border border-[#94a3b8] bg-card shadow-sm"
+                className="overflow-hidden rounded-xl border-2 border-[#1a2740] bg-card shadow-sm"
               >
                 <div className="flex items-center gap-2 px-4 pt-2.5">
                   <span className="text-sm font-semibold leading-tight">

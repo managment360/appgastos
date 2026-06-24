@@ -9,7 +9,7 @@ import type { ReportModel } from "@/lib/report";
 import { Button } from "@/components/ui/button";
 import { ReportTable } from "./report-table";
 import { formatCents } from "@/lib/money";
-import { whatsappLink, copyToClipboard } from "@/lib/share";
+import { whatsappLink } from "@/lib/share";
 import { todayISO, formatDateShort } from "@/lib/dates";
 import { useCanEdit } from "@/lib/current-member";
 import { setGroupStatus } from "@/app/actions/settlements";
@@ -31,11 +31,6 @@ export function ReportView({
   const [incLiquidacion, setIncLiquidacion] = useState(true);
   const [busy, setBusy] = useState(false);
   const nothingSelected = !incReportes && !incLiquidacion;
-
-  async function copyAlias(alias: string) {
-    const ok = await copyToClipboard(alias);
-    toast[ok ? "success" : "error"](ok ? "¡Alias copiado!" : "No se pudo copiar.");
-  }
   const sentDate = todayISO();
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? "?";
   const aliasOf = (id: string) =>
@@ -291,7 +286,6 @@ export function ReportView({
               report={report}
               nameOf={nameOf}
               aliasOf={aliasOf}
-              onCopy={copyAlias}
               showHeader={!incReportes}
             />
           )}
@@ -411,7 +405,6 @@ function LiquidacionPrint({
   report,
   nameOf,
   aliasOf,
-  onCopy,
   showHeader,
 }: {
   groupName: string;
@@ -420,17 +413,35 @@ function LiquidacionPrint({
   report: ReportModel;
   nameOf: (id: string) => string;
   aliasOf: (id: string) => string | null;
-  onCopy: (alias: string) => void;
   showHeader: boolean;
 }) {
   const NAVY = "#15253f";
+  const NAVY_SOFT = "#22375c";
   const RED = "#c0392b";
   const BLUE = "#2563eb";
   const MUTED = "#5f718c";
+  const TINT = "#eef3f9";
+  const DARK = "#1a2740";
   const symbol = currency === "ARS" ? "$" : `${currency} `;
   const adj = report.adjustments;
   const font =
     "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
+
+  const th: React.CSSProperties = {
+    background: NAVY,
+    color: "#fff",
+    fontWeight: 600,
+    padding: "7px 10px",
+    border: `2px solid ${NAVY_SOFT}`,
+    whiteSpace: "nowrap",
+    textAlign: "left",
+  };
+  const td: React.CSSProperties = {
+    background: TINT,
+    padding: "7px 10px",
+    border: `1px solid ${DARK}`,
+    whiteSpace: "nowrap",
+  };
 
   return (
     <div
@@ -458,43 +469,48 @@ function LiquidacionPrint({
           Están todos a mano, no hacen falta transferencias.
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {adj.map((a, i) => {
-            const alias = aliasOf(a.toMemberId);
-            return (
-              <div key={i} style={{ fontSize: 14, lineHeight: 1.35 }}>
-                <div>
-                  <b>{nameOf(a.fromMemberId)}</b> le paga a{" "}
-                  <b>{nameOf(a.toMemberId)}</b>:{" "}
-                  <b style={{ color: RED }}>
-                    {symbol}
-                    {formatCents(a.amount)}
-                  </b>
-                </div>
-                {alias ? (
-                  <button
-                    onClick={() => onCopy(alias)}
+        <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th style={th}>Integrante</th>
+              <th style={{ ...th, textAlign: "center" }}>le paga a</th>
+              <th style={th}>Integrante</th>
+              <th style={{ ...th, textAlign: "right" }}>Monto</th>
+              <th style={th}>Alias</th>
+            </tr>
+          </thead>
+          <tbody>
+            {adj.map((a, i) => {
+              const alias = aliasOf(a.toMemberId);
+              return (
+                <tr key={i}>
+                  <td style={{ ...td, fontWeight: 600 }}>
+                    {nameOf(a.fromMemberId)}
+                  </td>
+                  <td style={{ ...td, textAlign: "center", color: MUTED }}>→</td>
+                  <td style={{ ...td, fontWeight: 600 }}>
+                    {nameOf(a.toMemberId)}
+                  </td>
+                  <td
                     style={{
-                      color: BLUE,
-                      fontWeight: 600,
-                      textDecoration: "underline",
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      cursor: "pointer",
+                      ...td,
+                      textAlign: "right",
+                      color: RED,
+                      fontWeight: 700,
+                      fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    Alias: {alias} (tocá para copiar)
-                  </button>
-                ) : (
-                  <span style={{ color: MUTED }}>
-                    {nameOf(a.toMemberId)} sin alias
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    {symbol}
+                    {formatCents(a.amount)}
+                  </td>
+                  <td style={{ ...td, color: alias ? BLUE : MUTED, fontWeight: 600 }}>
+                    {alias ?? "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       )}
     </div>
   );

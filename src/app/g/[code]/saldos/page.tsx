@@ -43,7 +43,7 @@ export default async function BalancesPage({
           return (
             <li
               key={b.memberId}
-              className="overflow-hidden rounded-xl border border-[#94a3b8] bg-card shadow-sm"
+              className="overflow-hidden rounded-xl border-2 border-[#1a2740] bg-card shadow-sm"
             >
               <div className="flex items-center justify-between border-b border-[#cdd6e3] bg-muted/40 px-4 py-1.5">
                 <span className="text-base font-bold">
