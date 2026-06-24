@@ -10,6 +10,9 @@ export function BottomNav({ code }: { code: string }) {
   const pathname = usePathname();
   const base = `/g/${code}`;
 
+  // En Configuración no se muestra la barra inferior.
+  if (pathname === `${base}/config`) return null;
+
   const items = [
     { href: base, label: t.nav.expenses, icon: Receipt, exact: true },
     { href: `${base}/saldos`, label: t.nav.balances, icon: Scale },

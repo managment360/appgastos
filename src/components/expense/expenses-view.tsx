@@ -6,14 +6,13 @@ import { ExpenseSheet } from "./expense-sheet";
 import type { Group, Member } from "@/db/schema";
 import type { ExpenseWithDetails } from "@/db/queries";
 import type { MemberBalance } from "@/lib/balances";
-import { formatMoney, formatSigned } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { formatDateLong } from "@/lib/dates";
 import {
   setCurrentMember,
   useCurrentMember,
   useCanEdit,
 } from "@/lib/current-member";
-import { cn } from "@/lib/utils";
 import { ExpenseCard } from "./expense-card";
 import { MeSelector } from "./me-selector";
 
@@ -51,44 +50,54 @@ export function ExpensesView({
 
   const activeMembers = members.filter((m) => m.active);
 
+  const meMember = members.find((m) => m.id === me);
+
   return (
     <div className="flex flex-col">
-      {/* Resumen */}
+      {/* Tu balance */}
       <div className="border-b bg-card px-5 py-4">
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Total gastado
+        <div className="flex items-center gap-3">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-bold uppercase">
+            {meMember ? meMember.name.slice(0, 1) : "?"}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Tu balance</p>
+            {myBalance ? (
+              myBalance.net > 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Te deben un total de:{" "}
+                  <span className="font-bold text-pos">
+                    {formatMoney(myBalance.net, group.currency)}
+                  </span>
+                </p>
+              ) : myBalance.net < 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Debés un total de:{" "}
+                  <span className="font-bold text-neg">
+                    {formatMoney(-myBalance.net, group.currency)}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-sm font-medium text-muted-foreground">
+                  Estás a mano 👌
+                </p>
+              )
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Elegí quién sos abajo
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Total grupo
             </p>
-            <p className="text-2xl font-bold tabular">
+            <p className="text-sm font-bold tabular">
               {formatMoney(total, group.currency)}
             </p>
           </div>
-          {myBalance && (
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Tu posición
-              </p>
-              <p
-                className={cn(
-                  "text-xl font-bold tabular",
-                  myBalance.net > 0
-                    ? "text-pos"
-                    : myBalance.net < 0
-                      ? "text-neg"
-                      : "text-muted-foreground"
-                )}
-              >
-                {formatSigned(myBalance.net, group.currency)}
-              </p>
-            </div>
-          )}
         </div>
-        <MeSelector
-          members={activeMembers}
-          value={me}
-          onChange={chooseMe}
-        />
+        <MeSelector members={activeMembers} value={me} onChange={chooseMe} />
       </div>
 
       {/* Feed */}

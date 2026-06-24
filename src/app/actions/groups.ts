@@ -82,6 +82,27 @@ const updateSchema = z.object({
   description: z.string().trim().max(200).optional(),
 });
 
+const profileSchema = z.object({
+  groupCode: z.string(),
+  name: z.string().trim().min(1, "El nombre es obligatorio.").max(60),
+  /** data URL base64 o null para quitar. */
+  photo: z.string().max(3_000_000).nullable().optional(),
+});
+
+/** Edita nombre y/o foto del grupo (Personalizar grupo). */
+export async function updateGroupProfile(input: z.input<typeof profileSchema>) {
+  const data = profileSchema.parse(input);
+  const set: { name: string; photo?: string | null } = { name: data.name };
+  if (data.photo !== undefined) set.photo = data.photo;
+  await db
+    .update(groups)
+    .set(set)
+    .where(eq(groups.code, normalizeCode(data.groupCode)));
+  revalidatePath(`/g/${data.groupCode}`);
+  revalidatePath(`/g/${data.groupCode}/config`);
+  return { ok: true };
+}
+
 export async function updateGroup(input: z.input<typeof updateSchema>) {
   const data = updateSchema.parse(input);
   const [g] = await db

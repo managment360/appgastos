@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { toast } from "sonner";
 import QRCode from "qrcode";
 import { Share2, Copy, Check, MessageCircle, Link2 } from "lucide-react";
@@ -20,7 +20,13 @@ import {
   whatsappLink,
 } from "@/lib/share";
 
-export function ShareGroupSheet({ group }: { group: Group }) {
+export function ShareGroupSheet({
+  group,
+  trigger,
+}: {
+  group: Group;
+  trigger?: ReactElement;
+}) {
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [open, setOpen] = useState(false);
   const [qr, setQr] = useState<string>("");
@@ -53,12 +59,14 @@ export function ShareGroupSheet({ group }: { group: Group }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <button
-            className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition active:scale-95"
-            aria-label="Compartir grupo"
-          >
-            <Share2 className="size-4" />
-          </button>
+          trigger ?? (
+            <button
+              className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition active:scale-95"
+              aria-label="Compartir grupo"
+            >
+              <Share2 className="size-4" />
+            </button>
+          )
         }
       />
       <SheetContent side="bottom" className="gap-0 rounded-t-3xl">

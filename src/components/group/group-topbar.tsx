@@ -2,60 +2,64 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Users } from "lucide-react";
-import type { Group, Member, Note } from "@/db/schema";
-import { ShareGroupSheet } from "./share-group-sheet";
-import { NotesSheet } from "./notes-sheet";
+import { ArrowLeft, Settings } from "lucide-react";
+import type { Group } from "@/db/schema";
 
-export function GroupTopbar({
-  group,
-  memberCount,
-  members,
-  notes,
-}: {
-  group: Group;
-  memberCount: number;
-  members: Member[];
-  notes: Note[];
-}) {
+/** Banner del grupo: foto de portada (o navy) + título + atrás + tuerca (config). */
+export function GroupTopbar({ group }: { group: Group }) {
   const router = useRouter();
   const pathname = usePathname();
   const base = `/g/${group.code}`;
 
-  // En una sub-pantalla (saldos/saldar/reporte/miembros) la flecha vuelve a
-  // Gastos; en Gastos vuelve al inicio.
+  // En Configuración no se muestra el banner (esa página tiene su propio header).
+  if (pathname === `${base}/config`) return null;
+
   function goBack() {
     if (pathname === base) router.push("/");
     else router.push(base);
   }
 
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-2 border-b bg-background/90 px-3 py-3 backdrop-blur">
-      <button
-        onClick={goBack}
-        className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition active:scale-95"
-        aria-label="Volver"
-      >
-        <ArrowLeft className="size-5" />
-      </button>
+    <header className="relative h-40 shrink-0 overflow-hidden">
+      {/* Fondo: foto o degradé navy */}
+      {group.photo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={group.photo}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-navy)] to-[var(--color-navy-soft)]" />
+      )}
+      {/* Velo para legibilidad */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/30" />
 
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-lg font-bold leading-tight">
-          {group.name}
-        </h1>
-        <p className="text-xs text-muted-foreground">Código {group.code}</p>
+      {/* Controles arriba */}
+      <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+        <button
+          onClick={goBack}
+          aria-label="Volver"
+          className="flex size-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition active:scale-95"
+        >
+          <ArrowLeft className="size-5" />
+        </button>
+        <Link
+          href={`${base}/config`}
+          aria-label="Configuración del grupo"
+          className="flex size-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition active:scale-95"
+        >
+          <Settings className="size-5" />
+        </Link>
       </div>
 
-      <Link
-        href={`${base}/miembros`}
-        className="flex h-9 shrink-0 items-center gap-1 rounded-full bg-muted px-3 text-sm font-medium transition active:scale-95"
-      >
-        <Users className="size-4" />
-        {memberCount}
-      </Link>
-
-      <NotesSheet code={group.code} members={members} notes={notes} />
-      <ShareGroupSheet group={group} />
+      {/* Título */}
+      <div className="absolute inset-x-0 bottom-0 p-4">
+        <h1 className="truncate text-3xl font-extrabold text-white drop-shadow">
+          {group.name}
+        </h1>
+        <p className="text-xs font-medium text-white/80">Código {group.code}</p>
+      </div>
     </header>
   );
 }

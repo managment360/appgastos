@@ -26,6 +26,8 @@ export const groups = pgTable("groups", {
   status: text("status").$type<GroupStatus>().notNull().default("active"),
   /** Pizarra/anotador del grupo (visible para todos). */
   notes: text("notes"),
+  /** Foto de portada del grupo (data URL base64, opcional). */
+  photo: text("photo"),
   createdAt: text("created_at").notNull(),
 });
 

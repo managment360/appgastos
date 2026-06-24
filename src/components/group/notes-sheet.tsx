@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { NotebookPen, Plus, Trash2, StickyNote } from "lucide-react";
@@ -22,10 +22,12 @@ export function NotesSheet({
   code,
   members,
   notes,
+  trigger,
 }: {
   code: string;
   members: Member[];
   notes: Note[];
+  trigger?: ReactElement;
 }) {
   const router = useRouter();
   const me = useCurrentMember(code);
@@ -67,17 +69,19 @@ export function NotesSheet({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <button
-            className="relative flex size-9 items-center justify-center rounded-full bg-[var(--color-navy-soft)] text-white transition active:scale-95"
-            aria-label="Notas del grupo"
-          >
-            <NotebookPen className="size-4" />
-            {notes.length > 0 && (
-              <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-[var(--color-gold)] text-[10px] font-bold text-white">
-                {notes.length}
-              </span>
-            )}
-          </button>
+          trigger ?? (
+            <button
+              className="relative flex size-9 items-center justify-center rounded-full bg-[var(--color-navy-soft)] text-white transition active:scale-95"
+              aria-label="Notas del grupo"
+            >
+              <NotebookPen className="size-4" />
+              {notes.length > 0 && (
+                <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-[var(--color-gold)] text-[10px] font-bold text-white">
+                  {notes.length}
+                </span>
+              )}
+            </button>
+          )
         }
       />
       <SheetContent
