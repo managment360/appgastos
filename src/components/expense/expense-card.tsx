@@ -69,11 +69,11 @@ export function ExpenseCard({
 
       {/* Centro */}
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-          <span className="truncate text-sm font-semibold leading-tight">
+        <div className="flex items-center gap-1.5">
+          <span className="max-w-[45%] truncate text-sm font-semibold leading-tight">
             {expense.concept}
           </span>
-          <span className="shrink-0 rounded-full bg-[#fde68a] px-1.5 py-0.5 text-[10px] font-semibold text-[#7c4a03]">
+          <span className="min-w-0 truncate rounded-full bg-[#fde68a] px-1.5 py-0.5 text-[10px] font-semibold text-[#7c4a03]">
             pagó: {payerNames}
           </span>
         </div>
