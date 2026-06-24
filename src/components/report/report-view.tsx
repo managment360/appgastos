@@ -60,41 +60,89 @@ export function ReportView({
     }
   }
 
-  async function exportPdf() {
+  // Arma el PDF (tabla escalada a A4) y devuelve el doc jsPDF.
+  async function makePdf() {
     const node = document.getElementById("reporte-print");
-    if (!node) return;
+    if (!node) return null;
+    const [dataUrl, { jsPDF }] = await Promise.all([
+      snapshot(node),
+      import("jspdf"),
+    ]);
+    const img = new Image();
+    img.src = dataUrl;
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error("img"));
+    });
+    const landscape = img.width >= img.height;
+    const pdf = new jsPDF({
+      orientation: landscape ? "landscape" : "portrait",
+      unit: "pt",
+      format: "a4",
+    });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 14;
+    const ratio = Math.min(
+      (pageW - margin * 2) / img.width,
+      (pageH - margin * 2) / img.height
+    );
+    const w = img.width * ratio;
+    const h = img.height * ratio;
+    pdf.addImage(dataUrl, "PNG", (pageW - w) / 2, margin, w, h, undefined, "FAST");
+    return pdf;
+  }
+
+  async function exportPdf() {
     setExporting(true);
     try {
-      const [dataUrl, { jsPDF }] = await Promise.all([
-        snapshot(node),
-        import("jspdf"),
-      ]);
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise<void>((res, rej) => {
-        img.onload = () => res();
-        img.onerror = () => rej(new Error("img"));
-      });
-      const landscape = img.width >= img.height;
-      const pdf = new jsPDF({
-        orientation: landscape ? "landscape" : "portrait",
-        unit: "pt",
-        format: "a4",
-      });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 14;
-      const ratio = Math.min(
-        (pageW - margin * 2) / img.width,
-        (pageH - margin * 2) / img.height
-      );
-      const w = img.width * ratio;
-      const h = img.height * ratio;
-      pdf.addImage(dataUrl, "PNG", (pageW - w) / 2, margin, w, h, undefined, "FAST");
+      const pdf = await makePdf();
+      if (!pdf) return;
       pdf.save(`reporte-${group.code}.pdf`);
       toast.success("PDF descargado");
     } catch {
       toast.error("No se pudo generar el PDF.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // Comparte el PDF + el texto (saldos y pagos con alias). En el celu abre el
+  // menú de compartir para elegir WhatsApp; si no se puede adjuntar, descarga
+  // el PDF y abre WhatsApp con el texto.
+  async function shareWhatsApp() {
+    setExporting(true);
+    try {
+      const pdf = await makePdf();
+      const text = summaryText();
+      if (pdf) {
+        const blob = pdf.output("blob") as Blob;
+        const file = new File([blob], `reporte-${group.code}.pdf`, {
+          type: "application/pdf",
+        });
+        const nav = navigator as Navigator & {
+          canShare?: (d: { files: File[] }) => boolean;
+        };
+        if (nav.canShare?.({ files: [file] })) {
+          await nav.share({
+            files: [file],
+            text,
+            title: `${group.name} — Reporte`,
+          });
+          return;
+        }
+        // Fallback: descargar PDF y abrir WhatsApp con el texto.
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      window.open(whatsappLink(text), "_blank");
+      toast("Si no se adjuntó el PDF, está descargado para enviarlo.");
+    } catch {
+      // Cancelar el compartir no es error.
     } finally {
       setExporting(false);
     }
@@ -208,8 +256,8 @@ export function ReportView({
         </Button>
         <Button
           className="h-14 flex-col gap-1 bg-[#25D366] text-xs text-white hover:bg-[#1da851]"
-          disabled={!incBalances && !incSettle}
-          onClick={() => window.open(whatsappLink(summaryText()), "_blank")}
+          disabled={exporting}
+          onClick={shareWhatsApp}
         >
           <MessageCircle className="size-5" />
           WhatsApp
