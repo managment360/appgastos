@@ -115,6 +115,21 @@ export function ExpenseSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Al abrir, mostrar el sheet desde arriba (título + cerrar) y no autoenfocar
+  // un campo (evita que el teclado lo scrollee y tape el encabezado).
+  useEffect(() => {
+    if (!open) return;
+    const id = setTimeout(() => {
+      const el = document.querySelector(
+        '[data-slot="sheet-content"]'
+      ) as HTMLElement | null;
+      el?.scrollTo({ top: 0 });
+      const active = document.activeElement as HTMLElement | null;
+      if (active && el?.contains(active)) active.blur();
+    }, 60);
+    return () => clearTimeout(id);
+  }, [open]);
+
   const totalCents = parseToCents(amountStr);
 
   function toggleParticipant(id: string) {
