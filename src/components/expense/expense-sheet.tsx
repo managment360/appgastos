@@ -220,7 +220,6 @@ export function ExpenseSheet({
                 placeholder="0"
                 value={amountStr}
                 onChange={setAmountStr}
-                autoFocus={!initial}
                 className="w-52 bg-transparent text-center text-4xl font-bold outline-none placeholder:text-muted-foreground/40"
               />
             </div>
