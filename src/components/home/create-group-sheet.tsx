@@ -7,9 +7,9 @@ import { X, Plus, Star, Camera } from "lucide-react";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,15 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
       setMemberInput("");
       setMemberList([]);
       setStep("form");
+      const id = setTimeout(() => {
+        const el = document.querySelector(
+          '[data-slot="sheet-content"]'
+        ) as HTMLElement | null;
+        el?.scrollTo({ top: 0 });
+        const active = document.activeElement as HTMLElement | null;
+        if (active && el?.contains(active)) active.blur();
+      }, 60);
+      return () => clearTimeout(id);
     }
   }, [open]);
 
@@ -102,13 +111,24 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
       <SheetTrigger render={trigger} />
       <SheetContent
         side="bottom"
+        showCloseButton={false}
         className="max-h-[92vh] gap-0 overflow-y-auto rounded-t-3xl"
       >
-        <SheetHeader className="px-5">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-popover px-5 py-3">
           <SheetTitle className="text-xl">Crear grupo</SheetTitle>
-        </SheetHeader>
+          <SheetClose
+            render={
+              <button
+                aria-label="Cerrar"
+                className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition active:bg-muted"
+              >
+                <X className="size-5" />
+              </button>
+            }
+          />
+        </div>
 
-        <div className="flex flex-col gap-5 px-5 pb-6">
+        <div className="flex flex-col gap-5 px-5 pb-6 pt-4">
           {/* Foto del grupo (opcional) */}
           <div className="flex flex-col gap-2">
             <Label>Foto del grupo (opcional)</Label>
@@ -166,7 +186,6 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
               onChange={(e) => setName(e.target.value)}
               onFocus={scrollIntoCenter}
               autoCapitalize="words"
-              autoFocus
             />
           </div>
 
