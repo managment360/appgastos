@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Users } from "lucide-react";
+import { Users, X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,15 +216,27 @@ export function ExpenseSheet({
       <SheetTrigger render={trigger} />
       <SheetContent
         side="bottom"
+        showCloseButton={false}
         className="max-h-[94vh] gap-0 overflow-y-auto rounded-t-3xl"
       >
-        <SheetHeader className="px-5">
+        {/* Encabezado fijo: título + cerrar siempre visibles */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-popover px-5 py-3">
           <SheetTitle className="text-xl">
             {initial ? "Editar gasto" : "Nuevo gasto"}
           </SheetTitle>
-        </SheetHeader>
+          <SheetClose
+            render={
+              <button
+                aria-label="Cerrar"
+                className="flex size-9 items-center justify-center rounded-full text-muted-foreground transition active:bg-muted"
+              >
+                <X className="size-5" />
+              </button>
+            }
+          />
+        </div>
 
-        <div className="flex flex-col gap-5 px-5 pb-6">
+        <div className="flex flex-col gap-5 px-5 pb-6 pt-4">
           {/* Monto grande */}
           <div className="flex flex-col items-center pt-1">
             <div className="flex items-baseline gap-1">
