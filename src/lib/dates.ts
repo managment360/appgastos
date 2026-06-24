@@ -28,6 +28,35 @@ export function formatDateShort(iso: string | null): string {
   return shortFmt.format(d);
 }
 
+const monthYearFmt = new Intl.DateTimeFormat("es-AR", {
+  month: "long",
+  year: "numeric",
+});
+const monShortFmt = new Intl.DateTimeFormat("es-AR", { month: "short" });
+
+/** "2026-06-20" -> "Junio de 2026". */
+export function formatMonthYear(iso: string | null): string {
+  const d = iso ? parseLocal(iso) : null;
+  if (!d) return "Sin fecha";
+  const s = monthYearFmt.format(d);
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** "2026-06-20" -> { day: "20", mon: "jun" }. */
+export function formatDayMon(iso: string | null): { day: string; mon: string } {
+  const d = iso ? parseLocal(iso) : null;
+  if (!d) return { day: "–", mon: "" };
+  return {
+    day: String(d.getDate()),
+    mon: monShortFmt.format(d).replace(".", ""),
+  };
+}
+
+/** Clave de agrupación por mes: "YYYY-MM". */
+export function monthKey(iso: string | null): string {
+  return iso ? iso.slice(0, 7) : "0000-00";
+}
+
 /** Fecha de hoy como "YYYY-MM-DD" en horario local (sin desfase UTC). */
 export function todayISO(): string {
   const d = new Date();

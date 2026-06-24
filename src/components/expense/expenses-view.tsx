@@ -7,7 +7,7 @@ import type { Group, Member } from "@/db/schema";
 import type { ExpenseWithDetails } from "@/db/queries";
 import type { MemberBalance } from "@/lib/balances";
 import { formatMoney } from "@/lib/money";
-import { formatDateLong } from "@/lib/dates";
+import { formatMonthYear, monthKey } from "@/lib/dates";
 import {
   setCurrentMember,
   useCurrentMember,
@@ -37,11 +37,11 @@ export function ExpensesView({
   const total = expenses.reduce((a, e) => a + e.amount, 0);
   const myBalance = balances.find((b) => b.memberId === me);
 
-  // Agrupar por fecha (desc).
-  const groupsByDate = useMemo(() => {
+  // Agrupar por mes (desc).
+  const groupsByMonth = useMemo(() => {
     const map = new Map<string, ExpenseWithDetails[]>();
     for (const e of expenses) {
-      const key = e.expenseDate ?? "Sin fecha";
+      const key = monthKey(e.expenseDate);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(e);
     }
@@ -104,11 +104,11 @@ export function ExpensesView({
       {expenses.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="flex flex-col gap-3 px-4 py-4">
-          {groupsByDate.map(([date, items]) => (
-            <section key={date}>
-              <h3 className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {formatDateLong(date === "Sin fecha" ? null : date)}
+        <div className="flex flex-col gap-4 px-4 py-4">
+          {groupsByMonth.map(([key, items]) => (
+            <section key={key}>
+              <h3 className="mb-2 px-1 text-base font-bold">
+                {formatMonthYear(key === "0000-00" ? null : `${key}-01`)}
               </h3>
               <ul className="flex flex-col gap-1.5">
                 {items.map((e) => (

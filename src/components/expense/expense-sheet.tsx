@@ -26,8 +26,19 @@ import { computeShares, validateSplit } from "@/lib/split";
 import {
   createExpense,
   updateExpense,
+  deleteExpense,
   type ExpenseInput,
 } from "@/app/actions/expenses";
+import { Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 export type ExpenseInitial = {
   id: string;
@@ -409,6 +420,51 @@ export function ExpenseSheet({
           >
             {saving ? "Guardando…" : initial ? "Guardar cambios" : "Confirmar gasto"}
           </Button>
+
+          {initial && (
+            <Dialog>
+              <DialogTrigger
+                render={
+                  <button className="mx-auto flex items-center gap-1.5 py-1 text-sm font-medium text-[var(--color-neg)]">
+                    <Trash2 className="size-4" /> Eliminar gasto
+                  </button>
+                }
+              />
+              <DialogContent className="max-w-xs rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle>¿Eliminar gasto?</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  Se va a borrar &quot;{initial.concept}&quot; (
+                  {formatCents(initial.amount)}).
+                </p>
+                <DialogFooter className="flex-row justify-end gap-2">
+                  <DialogClose
+                    render={<Button variant="outline">Cancelar</Button>}
+                  />
+                  <Button
+                    variant="destructive"
+                    disabled={saving}
+                    onClick={async () => {
+                      setSaving(true);
+                      try {
+                        await deleteExpense({ id: initial.id, groupCode });
+                        toast.success("Gasto eliminado");
+                        setOpen(false);
+                        router.refresh();
+                      } catch {
+                        toast.error("No se pudo eliminar.");
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                  >
+                    Eliminar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </SheetContent>
     </Sheet>
