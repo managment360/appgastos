@@ -74,7 +74,11 @@ export function WhoAreYou({
   }
 
   return (
-    <Dialog open={visible} onOpenChange={(o) => !o && setVisible(false)}>
+    <Dialog
+      open={visible}
+      onOpenChange={(o) => !o && setVisible(false)}
+      modal={false}
+    >
       <DialogContent className="max-w-sm rounded-2xl" showCloseButton={false}>
         {step === "pick" ? (
           <>

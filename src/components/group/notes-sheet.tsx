@@ -66,7 +66,7 @@ export function NotesSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={setOpen} modal={false}>
       <SheetTrigger
         render={
           trigger ?? (

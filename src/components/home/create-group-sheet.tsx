@@ -107,7 +107,7 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={setOpen} modal={false}>
       <SheetTrigger render={trigger} />
       <SheetContent
         side="bottom"

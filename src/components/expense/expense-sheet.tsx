@@ -212,7 +212,7 @@ export function ExpenseSheet({
   const allSelected = participantCount === activeMembers.length;
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={setOpen} modal={false}>
       <SheetTrigger render={trigger} />
       <SheetContent
         side="bottom"

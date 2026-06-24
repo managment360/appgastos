@@ -50,7 +50,7 @@ export function JoinGroupSheet({ trigger }: { trigger: ReactElement }) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={setOpen} modal={false}>
       <SheetTrigger render={trigger} />
       <SheetContent side="bottom" className="gap-0 rounded-t-3xl">
         <SheetHeader className="px-5">
