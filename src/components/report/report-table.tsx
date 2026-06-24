@@ -90,13 +90,10 @@ export function ReportTable({
 
   return (
     <div
-      id="reporte-print"
       style={{
         background: "#fff",
         color: NAVY,
         padding: "18px",
-        display: "inline-block",
-        minWidth: "100%",
         fontFamily:
           "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif",
       }}
@@ -108,7 +105,7 @@ export function ReportTable({
           {groupName}
         </h2>
         <p style={{ fontSize: 14, fontWeight: 600, color: NAVY, margin: "2px 0 0" }}>
-          Detalle de Gastos y Deudas
+          Reportes de Gastos y Deudas
           {status === "pending_close"
             ? " — PENDIENTE DE CIERRE"
             : status === "closed"

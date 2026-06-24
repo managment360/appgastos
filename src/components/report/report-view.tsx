@@ -9,8 +9,8 @@ import type { ReportModel } from "@/lib/report";
 import { Button } from "@/components/ui/button";
 import { ReportTable } from "./report-table";
 import { formatCents } from "@/lib/money";
-import { whatsappLink } from "@/lib/share";
-import { todayISO } from "@/lib/dates";
+import { whatsappLink, copyToClipboard } from "@/lib/share";
+import { todayISO, formatDateShort } from "@/lib/dates";
 import { useCanEdit } from "@/lib/current-member";
 import { setGroupStatus } from "@/app/actions/settlements";
 import { cn } from "@/lib/utils";
@@ -27,9 +27,15 @@ export function ReportView({
   const router = useRouter();
   const canEdit = useCanEdit(group.code, members);
   const [exporting, setExporting] = useState(false);
-  const [incBalances, setIncBalances] = useState(true);
-  const [incSettle, setIncSettle] = useState(true);
+  const [incReportes, setIncReportes] = useState(true);
+  const [incLiquidacion, setIncLiquidacion] = useState(true);
   const [busy, setBusy] = useState(false);
+  const nothingSelected = !incReportes && !incLiquidacion;
+
+  async function copyAlias(alias: string) {
+    const ok = await copyToClipboard(alias);
+    toast[ok ? "success" : "error"](ok ? "¡Alias copiado!" : "No se pudo copiar.");
+  }
   const sentDate = todayISO();
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? "?";
   const aliasOf = (id: string) =>
@@ -166,7 +172,7 @@ export function ReportView({
         "⚠️ Verificá los movimientos para poder cerrar las cuentas."
       );
     }
-    if (incBalances) {
+    if (incReportes) {
       lines.push("", "💰 *Saldos de cada uno*");
       for (const m of report.members) {
         const net = report.totals[m.id] ?? 0;
@@ -177,7 +183,7 @@ export function ReportView({
         else lines.push(`• ${m.name}: al día`);
       }
     }
-    if (incSettle) {
+    if (incLiquidacion) {
       if (report.adjustments.length) {
         lines.push("", "🔄 *Para saldar* (quién le transfiere a quién)");
         for (const a of report.adjustments) {
@@ -226,10 +232,10 @@ export function ReportView({
       {/* Qué incluir al enviar */}
       <div className="no-print mb-2 flex items-center gap-2 px-1 text-sm">
         <span className="text-muted-foreground">Enviar:</span>
-        <Chip on={incBalances} onClick={() => setIncBalances((v) => !v)}>
-          Saldos
+        <Chip on={incReportes} onClick={() => setIncReportes((v) => !v)}>
+          Reportes
         </Chip>
-        <Chip on={incSettle} onClick={() => setIncSettle((v) => !v)}>
+        <Chip on={incLiquidacion} onClick={() => setIncLiquidacion((v) => !v)}>
           Liquidación
         </Chip>
       </div>
@@ -239,7 +245,7 @@ export function ReportView({
         <Button
           variant="outline"
           className="h-14 flex-col gap-1 text-xs"
-          disabled={exporting}
+          disabled={exporting || nothingSelected}
           onClick={exportPdf}
         >
           <FileText className="size-5" />
@@ -248,7 +254,7 @@ export function ReportView({
         <Button
           variant="outline"
           className="h-14 flex-col gap-1 text-xs"
-          disabled={exporting}
+          disabled={exporting || nothingSelected}
           onClick={exportPng}
         >
           <ImageDown className="size-5" />
@@ -256,7 +262,7 @@ export function ReportView({
         </Button>
         <Button
           className="h-14 flex-col gap-1 bg-[#25D366] text-xs text-white hover:bg-[#1da851]"
-          disabled={exporting}
+          disabled={exporting || nothingSelected}
           onClick={shareWhatsApp}
         >
           <MessageCircle className="size-5" />
@@ -264,16 +270,37 @@ export function ReportView({
         </Button>
       </div>
 
-      {/* Tabla */}
+      {/* Área imprimible: según lo tildado va la tabla y/o la liquidación */}
       <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-2xl border bg-white shadow-sm">
-        <ReportTable
-          report={report}
-          groupName={group.name}
-          groupIcon={group.icon}
-          currency={group.currency}
-          sentDate={sentDate}
-          status={group.status}
-        />
+        <div id="reporte-print" style={{ display: "inline-block", minWidth: "100%", background: "#fff" }}>
+          {incReportes && (
+            <ReportTable
+              report={report}
+              groupName={group.name}
+              groupIcon={group.icon}
+              currency={group.currency}
+              sentDate={sentDate}
+              status={group.status}
+            />
+          )}
+          {incLiquidacion && (
+            <LiquidacionPrint
+              groupName={group.name}
+              currency={group.currency}
+              sentDate={sentDate}
+              report={report}
+              nameOf={nameOf}
+              aliasOf={aliasOf}
+              onCopy={copyAlias}
+              showHeader={!incReportes}
+            />
+          )}
+          {nothingSelected && (
+            <p className="p-6 text-center text-sm text-muted-foreground">
+              Elegí <b>Reportes</b> y/o <b>Liquidación</b> para generar el envío.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Estado / cierre de cuentas (solo admin) */}
@@ -374,5 +401,101 @@ function Chip({
     >
       {children}
     </button>
+  );
+}
+
+function LiquidacionPrint({
+  groupName,
+  currency,
+  sentDate,
+  report,
+  nameOf,
+  aliasOf,
+  onCopy,
+  showHeader,
+}: {
+  groupName: string;
+  currency: string;
+  sentDate: string;
+  report: ReportModel;
+  nameOf: (id: string) => string;
+  aliasOf: (id: string) => string | null;
+  onCopy: (alias: string) => void;
+  showHeader: boolean;
+}) {
+  const NAVY = "#15253f";
+  const RED = "#c0392b";
+  const BLUE = "#2563eb";
+  const MUTED = "#5f718c";
+  const symbol = currency === "ARS" ? "$" : `${currency} `;
+  const adj = report.adjustments;
+  const font =
+    "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif";
+
+  return (
+    <div
+      style={{
+        background: "#fff",
+        color: NAVY,
+        padding: "18px",
+        fontFamily: font,
+        borderTop: showHeader ? undefined : "1px solid #e2e9f2",
+      }}
+    >
+      {showHeader && (
+        <div style={{ marginBottom: 10 }}>
+          <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0 }}>{groupName}</h2>
+          <p style={{ fontSize: 12, color: MUTED, margin: "2px 0 0" }}>
+            Liquidación · Enviado el {formatDateShort(sentDate)}
+          </p>
+        </div>
+      )}
+      <h3 style={{ fontSize: 15, fontWeight: 800, margin: "0 0 8px" }}>
+        Liquidación — Pagos para saldar
+      </h3>
+      {adj.length === 0 ? (
+        <p style={{ fontSize: 13, color: MUTED }}>
+          Están todos a mano, no hacen falta transferencias.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {adj.map((a, i) => {
+            const alias = aliasOf(a.toMemberId);
+            return (
+              <div key={i} style={{ fontSize: 14, lineHeight: 1.35 }}>
+                <div>
+                  <b>{nameOf(a.fromMemberId)}</b> le paga a{" "}
+                  <b>{nameOf(a.toMemberId)}</b>:{" "}
+                  <b style={{ color: RED }}>
+                    {symbol}
+                    {formatCents(a.amount)}
+                  </b>
+                </div>
+                {alias ? (
+                  <button
+                    onClick={() => onCopy(alias)}
+                    style={{
+                      color: BLUE,
+                      fontWeight: 600,
+                      textDecoration: "underline",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Alias: {alias} (tocá para copiar)
+                  </button>
+                ) : (
+                  <span style={{ color: MUTED }}>
+                    {nameOf(a.toMemberId)} sin alias
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

@@ -145,7 +145,7 @@ export function SettleView({
                   {to?.aliasCbu ? (
                     <button
                       onClick={() => copyAlias(to.aliasCbu)}
-                      className="flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1.5 text-sm font-medium"
+                      className="flex items-center gap-1.5 text-sm font-semibold text-[#2563eb] underline"
                     >
                       <Copy className="size-3.5" />
                       {to.aliasCbu}
