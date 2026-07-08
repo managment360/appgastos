@@ -3,10 +3,17 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeft, Settings } from "lucide-react";
-import type { Group } from "@/db/schema";
+import type { Group, Member } from "@/db/schema";
+import { MePill } from "./me-pill";
 
 /** Banner del grupo: foto de portada (o navy) + título + atrás + tuerca (config). */
-export function GroupTopbar({ group }: { group: Group }) {
+export function GroupTopbar({
+  group,
+  members,
+}: {
+  group: Group;
+  members: Member[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const base = `/g/${group.code}`;
@@ -44,6 +51,7 @@ export function GroupTopbar({ group }: { group: Group }) {
         >
           <ArrowLeft className="size-5" />
         </button>
+        <MePill code={group.code} members={members} />
         <Link
           href={`${base}/config`}
           aria-label="Configuración del grupo"

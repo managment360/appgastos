@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Plus, LogIn, Receipt, Trash2 } from "lucide-react";
+import { ChevronRight, Plus, LogIn, Receipt, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   getRecentGroups,
@@ -10,6 +10,7 @@ import {
   type RecentGroup,
 } from "@/lib/recent-groups";
 import { getCurrentMember } from "@/lib/current-member";
+import { getProfile, useProfile } from "@/lib/profile";
 import {
   deleteGroup,
   getHomeSummaries,
@@ -30,13 +31,25 @@ import {
 } from "@/components/ui/dialog";
 import { CreateGroupSheet } from "./create-group-sheet";
 import { JoinGroupSheet } from "./join-group-sheet";
+import { IdentityGate } from "./identity-gate";
 import { TextSizeControl } from "@/components/text-size-control";
 
 export function HomeClient() {
   const router = useRouter();
+  const profile = useProfile();
   const [recent, setRecent] = useState<RecentGroup[]>([]);
   const [summaries, setSummaries] = useState<Record<string, HomeSummary>>({});
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [gateOpen, setGateOpen] = useState(false);
+  const [gateForced, setGateForced] = useState(false);
+
+  // Momento 0: si el dispositivo todavía no tiene identidad, la pedimos.
+  useEffect(() => {
+    if (getProfile() === null) {
+      setGateForced(true);
+      setGateOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     const list = getRecentGroups();
@@ -75,15 +88,27 @@ export function HomeClient() {
     }
   }
 
-  // Total general (suma de saldos conocidos).
+  // Total general POR MONEDA (no se pueden sumar monedas distintas).
   const found = recent.map((g) => summaries[g.code]).filter(Boolean);
-  const totalNet = found.reduce((a, s) => a + (s?.net ?? 0), 0);
-  const totalCurrency = found.find((s) => s?.currency)?.currency ?? "ARS";
+  const totalsByCurrency = new Map<string, number>();
+  for (const s of found) {
+    if (!s) continue;
+    const cur = s.currency ?? "ARS";
+    totalsByCurrency.set(cur, (totalsByCurrency.get(cur) ?? 0) + (s.net ?? 0));
+  }
+  const totalLines = [...totalsByCurrency.entries()].filter(([, n]) => n !== 0);
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-6 pb-10">
+      {/* Identidad del dispositivo (momento 0 + edición). */}
+      <IdentityGate
+        open={gateOpen}
+        onOpenChange={setGateOpen}
+        forced={gateForced}
+      />
+
       {/* Top: marca chica, sin logo */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold leading-tight tracking-tight">
             {t.appName}
@@ -93,6 +118,28 @@ export function HomeClient() {
         <TextSizeControl />
       </div>
 
+      {/* Saludo + pastilla de identidad del dispositivo. */}
+      {profile && (
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <p className="text-xl font-bold leading-tight">
+            Hola, {profile.name}
+          </p>
+          <button
+            onClick={() => {
+              setGateForced(false);
+              setGateOpen(true);
+            }}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-sm font-medium shadow-sm transition active:scale-95"
+          >
+            <span className="flex size-6 items-center justify-center rounded-full bg-sky text-xs font-bold uppercase">
+              {profile.name.slice(0, 1)}
+            </span>
+            <span className="max-w-[7rem] truncate">{profile.name}</span>
+            <Pencil className="size-3.5 text-muted-foreground" />
+          </button>
+        </div>
+      )}
+
       {/* Grupos */}
       <section className="mb-6">
         <h2 className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -100,25 +147,27 @@ export function HomeClient() {
         </h2>
 
         {recent.length > 0 && (
-          <p className="mb-3 px-1 text-base font-bold">
-            {totalNet > 0 ? (
-              <>
-                Te deben un total de:{" "}
-                <span className="text-pos">
-                  {formatMoney(totalNet, totalCurrency)}
-                </span>
-              </>
-            ) : totalNet < 0 ? (
-              <>
-                Debés un total de:{" "}
-                <span className="text-neg">
-                  {formatMoney(-totalNet, totalCurrency)}
-                </span>
-              </>
-            ) : (
+          <div className="mb-3 px-1 text-base font-bold">
+            {totalLines.length === 0 ? (
               <span className="text-muted-foreground">Estás a mano</span>
+            ) : (
+              totalLines.map(([cur, net]) => (
+                <p key={cur}>
+                  {net > 0 ? (
+                    <>
+                      Te deben un total de:{" "}
+                      <span className="text-pos">{formatMoney(net, cur)}</span>
+                    </>
+                  ) : (
+                    <>
+                      Debés un total de:{" "}
+                      <span className="text-neg">{formatMoney(-net, cur)}</span>
+                    </>
+                  )}
+                </p>
+              ))
             )}
-          </p>
+          </div>
         )}
 
         {recent.length === 0 ? (

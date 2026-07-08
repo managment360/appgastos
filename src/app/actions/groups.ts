@@ -55,7 +55,19 @@ const createSchema = z.object({
   photo: z.string().max(3_000_000).nullable().optional(),
   description: z.string().trim().max(200).optional(),
   currency: z.string().min(1).default("ARS"),
-  /** Miembros iniciales (opcional), con flag de administrador. */
+  /**
+   * Quien crea el grupo (identidad del dispositivo). Se suma como miembro
+   * ADMIN automáticamente, así el creador nunca "se pierde" del grupo.
+   */
+  creator: z
+    .object({
+      name: z.string().trim().min(1),
+      aliasCbu: z.string().trim().max(120).optional(),
+      phone: z.string().trim().max(40).optional(),
+      email: z.string().trim().max(120).optional(),
+    })
+    .optional(),
+  /** Otros miembros iniciales (opcional), con flag de administrador. */
   members: z
     .array(
       z.object({
@@ -91,7 +103,27 @@ export async function createGroup(input: CreateGroupInput) {
     createdAt: now,
   });
 
+  // El creador entra primero, como administrador.
+  let creatorMemberId: string | null = null;
+  if (data.creator) {
+    creatorMemberId = newId();
+    await db.insert(members).values({
+      id: creatorMemberId,
+      groupId,
+      name: data.creator.name,
+      aliasCbu: data.creator.aliasCbu || null,
+      phone: data.creator.phone || null,
+      email: data.creator.email || null,
+      active: true,
+      isAdmin: true,
+      createdAt: now,
+    });
+  }
+
+  // Resto de miembros: evito duplicar al creador si lo tipearon de nuevo.
+  const creatorName = data.creator?.name.trim().toLowerCase();
   for (const m of data.members) {
+    if (creatorName && m.name.trim().toLowerCase() === creatorName) continue;
     await db.insert(members).values({
       id: newId(),
       groupId,
@@ -102,7 +134,7 @@ export async function createGroup(input: CreateGroupInput) {
     });
   }
 
-  return { code, name: data.name, icon: data.icon };
+  return { code, name: data.name, icon: data.icon, creatorMemberId };
 }
 
 /** Elimina el grupo y todos sus datos (cascade). Irreversible. */

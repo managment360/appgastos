@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { CURRENCIES } from "@/lib/currencies";
 import { createGroup } from "@/app/actions/groups";
 import { rememberGroup } from "@/lib/recent-groups";
+import { setCurrentMember } from "@/lib/current-member";
+import { useProfile } from "@/lib/profile";
 import { cn, scrollIntoCenter } from "@/lib/utils";
 import { fileToResizedDataUrl } from "@/lib/image";
 
@@ -24,6 +26,7 @@ type Step = "form" | "confirm-empty" | "confirm-ready";
 
 export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   const router = useRouter();
+  const profile = useProfile();
   const memberRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -95,7 +98,22 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
   async function doCreate() {
     setSaving(true);
     try {
-      const res = await createGroup({ name, photo, currency, members: memberList });
+      const res = await createGroup({
+        name,
+        photo,
+        currency,
+        creator: profile
+          ? {
+              name: profile.name,
+              aliasCbu: profile.aliasCbu,
+              phone: profile.phone,
+              email: profile.email,
+            }
+          : undefined,
+        members: memberList,
+      });
+      // Fijo "quién sos" en este grupo = el miembro creado para vos.
+      if (res.creatorMemberId) setCurrentMember(res.code, res.creatorMemberId);
       rememberGroup({ code: res.code, name: res.name, icon: res.icon });
       toast.success(`Grupo creado: ${res.code}`);
       router.push(`/g/${res.code}`);
@@ -240,8 +258,15 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
               un código para compartir.
             </p>
 
-            {memberList.length > 0 && (
+            {(profile || memberList.length > 0) && (
               <ul className="flex flex-wrap gap-2 pt-1">
+                {profile && (
+                  <li className="flex items-center gap-1.5 rounded-full bg-[var(--color-gold-soft)] py-1 pl-3 pr-3 text-sm font-medium">
+                    <Star className="size-4 fill-[var(--color-gold)] text-[var(--color-gold)]" />
+                    {profile.name}{" "}
+                    <span className="text-[var(--color-gold)]">(vos · admin)</span>
+                  </li>
+                )}
                 {memberList.map((m) => (
                   <li
                     key={m.name}
@@ -293,7 +318,8 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
           {step === "confirm-empty" && (
             <div className="flex flex-col gap-2 rounded-2xl border bg-muted/40 p-4">
               <p className="text-sm font-medium">
-                No agregaste ningún miembro. ¿Querés agregar uno?
+                Por ahora estás solo vos en el grupo. ¿Querés agregar a alguien
+                más?
               </p>
               <div className="flex gap-2">
                 <Button
@@ -320,8 +346,8 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
           {step === "confirm-ready" && (
             <div className="flex flex-col gap-2 rounded-2xl border bg-muted/40 p-4">
               <p className="text-sm font-medium">
-                ¿Desea crear el grupo con {memberList.length} miembro
-                {memberList.length === 1 ? "" : "s"}?
+                ¿Desea crear el grupo con {memberList.length + 1} miembro
+                {memberList.length + 1 === 1 ? "" : "s"} (incluyéndote)?
               </p>
               <div className="flex gap-2">
                 <Button
