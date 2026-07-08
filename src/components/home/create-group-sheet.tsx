@@ -99,7 +99,8 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
       rememberGroup({ code: res.code, name: res.name, icon: res.icon });
       toast.success(`Grupo creado: ${res.code}`);
       router.push(`/g/${res.code}`);
-    } catch {
+    } catch (err) {
+      console.error("createGroup falló:", err);
       toast.error("No se pudo crear el grupo.");
       setSaving(false);
       setStep("form");
