@@ -50,6 +50,12 @@ export const members = pgTable("members", {
    * personas no ocupen el mismo miembro. Estado COMPARTIDO (servidor).
    */
   claimed: boolean("claimed").notNull().default(false),
+  /**
+   * Token del dispositivo que ocupa el lugar. Si otro dispositivo entra como
+   * "yo desde otro lado", se sobrescribe y el anterior queda expulsado (al
+   * detectar que ya no coincide con el suyo).
+   */
+  claimedBy: text("claimed_by"),
   createdAt: text("created_at").notNull(),
 });
 
@@ -108,6 +114,27 @@ export const notes = pgTable("notes", {
     onDelete: "set null",
   }),
   text: text("text").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export type ActivityType =
+  | "expense_add"
+  | "expense_edit"
+  | "expense_delete"
+  | "member_claim"
+  | "member_switch"
+  | "member_join";
+
+/** Registro de actividad del grupo (para la campana de notificaciones). */
+export const activity = pgTable("activity", {
+  id: text("id").primaryKey(),
+  groupId: text("group_id")
+    .notNull()
+    .references(() => groups.id, { onDelete: "cascade" }),
+  type: text("type").$type<ActivityType>().notNull(),
+  /** Quién lo hizo (nombre del miembro; sin login). */
+  actorName: text("actor_name"),
+  message: text("message").notNull(),
   createdAt: text("created_at").notNull(),
 });
 
@@ -178,3 +205,4 @@ export type ExpensePayer = typeof expensePayers.$inferSelect;
 export type ExpenseShare = typeof expenseShares.$inferSelect;
 export type Settlement = typeof settlements.$inferSelect;
 export type Note = typeof notes.$inferSelect;
+export type Activity = typeof activity.$inferSelect;

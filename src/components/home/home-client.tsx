@@ -183,6 +183,7 @@ export function HomeClient() {
               const cur = s?.currency ?? "ARS";
               const photo = s?.photo;
               const name = s?.name ?? g.name;
+              const memberName = s?.memberName;
               return (
                 <li
                   key={g.code}
@@ -205,12 +206,19 @@ export function HomeClient() {
                       )}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-base font-bold leading-tight">
-                        {name}
+                      <span className="flex items-center gap-2">
+                        <span className="truncate text-base font-bold leading-tight">
+                          {name}
+                        </span>
+                        {memberName && (
+                          <span className="shrink-0 rounded-full bg-[#fde68a] px-1.5 py-0.5 text-[10px] font-semibold text-[#7c4a03]">
+                            Soy {memberName}
+                          </span>
+                        )}
                       </span>
                       <span
                         className={cn(
-                          "block text-sm font-medium",
+                          "mt-0.5 block text-sm font-medium",
                           net > 0
                             ? "text-pos"
                             : net < 0

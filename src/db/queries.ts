@@ -13,6 +13,7 @@ import {
   expenseShares,
   settlements,
   notes,
+  activity,
   type Group,
   type Member,
   type Expense,
@@ -20,6 +21,7 @@ import {
   type ExpenseShare,
   type Settlement,
   type Note,
+  type Activity,
 } from "./schema";
 import { normalizeCode } from "@/lib/ids";
 
@@ -99,6 +101,17 @@ export const getExpenses = cache(async (
 export const getSettlements = cache(
   async (groupId: string): Promise<Settlement[]> => {
     return db.select().from(settlements).where(eq(settlements.groupId, groupId));
+  }
+);
+
+export const getActivity = cache(
+  async (groupId: string, limit = 50): Promise<Activity[]> => {
+    return db
+      .select()
+      .from(activity)
+      .where(eq(activity.groupId, groupId))
+      .orderBy(desc(activity.createdAt))
+      .limit(limit);
   }
 );
 

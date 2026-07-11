@@ -136,6 +136,7 @@ export function ExpensesView({
             groupCode={group.code}
             members={activeMembers}
             currency={group.currency}
+            actorName={meMember?.name}
             trigger={
               <button
                 className="pointer-events-auto flex size-12 items-center justify-center rounded-full bg-[var(--color-gold)] text-white shadow-lg shadow-black/20 transition active:scale-95"

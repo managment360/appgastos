@@ -16,6 +16,8 @@ export type HomeSummary = {
   photo?: string | null;
   currency?: string;
   net?: number;
+  /** Cómo te llamás EN ESE grupo (el miembro que sos), si ya elegiste. */
+  memberName?: string;
 };
 
 /** Resumen por grupo para la home: nombre, foto, moneda y saldo del miembro. */
@@ -37,6 +39,9 @@ export async function getHomeSummaries(
     const net = it.memberId
       ? balances.find((b) => b.memberId === it.memberId)?.net ?? 0
       : 0;
+    const memberName = it.memberId
+      ? data.members.find((m) => m.id === it.memberId)?.name
+      : undefined;
     out.push({
       code: data.group.code,
       found: true,
@@ -44,6 +49,7 @@ export async function getHomeSummaries(
       photo: data.group.photo,
       currency: data.group.currency,
       net,
+      memberName,
     });
   }
   return out;

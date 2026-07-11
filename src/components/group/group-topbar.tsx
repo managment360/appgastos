@@ -3,16 +3,19 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeft, Settings } from "lucide-react";
-import type { Group, Member } from "@/db/schema";
+import type { Group, Member, Activity } from "@/db/schema";
 import { MePill } from "./me-pill";
+import { ActivityBell } from "./activity-bell";
 
-/** Banner del grupo: foto de portada (o navy) + título + atrás + tuerca (config). */
+/** Banner del grupo: foto de portada (o navy) + título + atrás + campana + tuerca. */
 export function GroupTopbar({
   group,
   members,
+  activity,
 }: {
   group: Group;
   members: Member[];
+  activity: Activity[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -52,13 +55,16 @@ export function GroupTopbar({
           <ArrowLeft className="size-5" />
         </button>
         <MePill code={group.code} members={members} />
-        <Link
-          href={`${base}/config`}
-          aria-label="Configuración del grupo"
-          className="flex size-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition active:scale-95"
-        >
-          <Settings className="size-5" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <ActivityBell code={group.code} activity={activity} />
+          <Link
+            href={`${base}/config`}
+            aria-label="Configuración del grupo"
+            className="flex size-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition active:scale-95"
+          >
+            <Settings className="size-5" />
+          </Link>
+        </div>
       </div>
 
       {/* Título */}

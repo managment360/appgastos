@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Star, Check, UserPlus } from "lucide-react";
+import { Star, Check, UserPlus, Smartphone } from "lucide-react";
 import type { Member } from "@/db/schema";
 import {
   Dialog,
@@ -16,7 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getCurrentMember, setCurrentMember } from "@/lib/current-member";
 import { getProfile, setProfile } from "@/lib/profile";
-import { updateMember, addMember, claimMember } from "@/app/actions/members";
+import { getDeviceId } from "@/lib/device";
+import {
+  updateMember,
+  addMember,
+  claimMember,
+  switchDeviceClaim,
+} from "@/app/actions/members";
 import { cn, scrollIntoCenter } from "@/lib/utils";
 
 /**
@@ -37,25 +43,40 @@ export function WhoAreYou({
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState<"pick" | "data" | "new">("pick");
   const [picked, setPicked] = useState<Member | null>(null);
+  const [switching, setSwitching] = useState<Member | null>(null);
   const [name, setName] = useState("");
   const [alias, setAlias] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Mostrar solo si todavía no dijiste quién sos en este dispositivo.
+  // Mostrar si todavía no dijiste quién sos en este dispositivo. Reacciona al
+  // evento me-changed para reaparecer si otro dispositivo te expulsó (kick).
   useEffect(() => {
-    if (members.length > 0 && getCurrentMember(code) === null) {
-      setVisible(true);
-    }
+    const check = () => {
+      if (members.length > 0 && getCurrentMember(code) === null) {
+        setVisible(true);
+      }
+    };
+    check();
+    window.addEventListener("dg:me-changed", check);
+    window.addEventListener("storage", check);
+    return () => {
+      window.removeEventListener("dg:me-changed", check);
+      window.removeEventListener("storage", check);
+    };
   }, [code, members.length]);
 
-  // Elegir un lugar de la lista.
+  // Elegir un lugar LIBRE de la lista.
   async function choose(m: Member) {
     if (m.claimed || saving) return;
     setSaving(true);
     try {
-      const res = await claimMember({ code, memberId: m.id });
+      const res = await claimMember({
+        code,
+        memberId: m.id,
+        deviceId: getDeviceId(),
+      });
       if (!res.ok) {
         toast.error("Ese lugar ya fue tomado por otra persona.");
         router.refresh(); // refresca la lista (queda en gris)
@@ -72,6 +93,39 @@ export function WhoAreYou({
       toast.error("No se pudo entrar. Probá de nuevo.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  // "Soy yo pero desde otro dispositivo": roba el lugar y expulsa al anterior.
+  async function doSwitch(m: Member) {
+    setSaving(true);
+    try {
+      const res = await switchDeviceClaim({
+        code,
+        memberId: m.id,
+        deviceId: getDeviceId(),
+      });
+      if (!res.ok) {
+        toast.error("No se pudo. Probá de nuevo.");
+        return;
+      }
+      setCurrentMember(code, m.id);
+      if (!getProfile()) {
+        setProfile({
+          name: m.name,
+          aliasCbu: m.aliasCbu || undefined,
+          phone: m.phone || undefined,
+          email: m.email || undefined,
+        });
+      }
+      toast.success(`¡Hola de nuevo, ${m.name}!`);
+      setSwitching(null);
+      router.refresh();
+    } catch {
+      toast.error("No se pudo. Probá de nuevo.");
+    } finally {
+      setSaving(false);
+      setVisible(false);
     }
   }
 
@@ -119,6 +173,7 @@ export function WhoAreYou({
         phone,
         email,
         claimed: true,
+        deviceId: getDeviceId(),
       });
       setCurrentMember(code, res.id);
       if (!getProfile()) {
@@ -155,30 +210,82 @@ export function WhoAreYou({
       modal={false}
     >
       <DialogContent className="max-w-sm rounded-2xl" showCloseButton={false}>
-        {step === "pick" && (
+        {step === "pick" && switching && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-xl">¿Sos {switching.name}?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Vas a entrar como <strong>{switching.name}</strong> desde este
+              dispositivo. Se va a cerrar su sesión en el otro dispositivo.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                className="h-11 flex-1"
+                onClick={() => setSwitching(null)}
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="h-11 flex-1"
+                onClick={() => doSwitch(switching)}
+                disabled={saving}
+              >
+                {saving ? "Entrando…" : "Sí, soy yo"}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {step === "pick" && !switching && (
           <>
             <DialogHeader>
               <DialogTitle className="text-xl">¿Quién sos?</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              Elegí tu lugar en el grupo. Los que ya ingresaron aparecen en gris.
+              Elegí tu lugar. Los que ya ingresaron están en gris; si sos vos
+              desde otro dispositivo, tocá <strong>Soy yo</strong>.
             </p>
             <ul className="flex max-h-[46vh] flex-col gap-2 overflow-y-auto pt-1">
-              {members.map((m) => {
-                const taken = m.claimed;
-                return (
+              {members.map((m) =>
+                m.claimed ? (
+                  <li
+                    key={m.id}
+                    className="flex items-center gap-3 rounded-xl border bg-muted/40 px-4 py-2.5"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted font-semibold uppercase text-muted-foreground">
+                      {m.name.slice(0, 1)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-muted-foreground">
+                        {m.name}
+                      </span>
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Check className="size-3" /> ya ingresó
+                      </span>
+                    </span>
+                    {m.isAdmin && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-[var(--color-gold-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-gold)]">
+                        <Star className="size-3 fill-current" /> admin
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setSwitching(m)}
+                      className="flex shrink-0 items-center gap-1 rounded-full border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary transition active:scale-95"
+                    >
+                      <Smartphone className="size-3.5" /> Soy yo
+                    </button>
+                  </li>
+                ) : (
                   <li key={m.id}>
                     <button
                       onClick={() => choose(m)}
-                      disabled={taken || saving}
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition",
-                        taken
-                          ? "cursor-not-allowed opacity-50"
-                          : "active:scale-[0.99]"
-                      )}
+                      disabled={saving}
+                      className="flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition active:scale-[0.99]"
                     >
-                      <span className="flex size-9 items-center justify-center rounded-full bg-sky font-semibold uppercase">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sky font-semibold uppercase">
                         {m.name.slice(0, 1)}
                       </span>
                       <span className="flex-1 truncate font-semibold">
@@ -189,15 +296,10 @@ export function WhoAreYou({
                           <Star className="size-3 fill-current" /> admin
                         </span>
                       )}
-                      {taken && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Check className="size-3.5" /> ya ingresó
-                        </span>
-                      )}
                     </button>
                   </li>
-                );
-              })}
+                )
+              )}
             </ul>
 
             <button

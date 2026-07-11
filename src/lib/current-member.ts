@@ -34,6 +34,16 @@ export function setCurrentMember(code: string, memberId: string): void {
   window.dispatchEvent(new CustomEvent(EVENT));
 }
 
+/** Borra "quién sos" en este grupo (p. ej. al ser expulsado por otro dispositivo). */
+export function clearCurrentMember(code: string): void {
+  if (typeof window === "undefined") return;
+  const map = read();
+  if (map[code] === undefined) return;
+  delete map[code];
+  window.localStorage.setItem(KEY, JSON.stringify(map));
+  window.dispatchEvent(new CustomEvent(EVENT));
+}
+
 /** Hook reactivo: devuelve el memberId actual (o null) y se actualiza al cambiar. */
 export function useCurrentMember(code: string): string | null {
   const [me, setMe] = useState<string | null>(null);

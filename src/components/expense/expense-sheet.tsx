@@ -62,12 +62,15 @@ export function ExpenseSheet({
   currency,
   trigger,
   initial,
+  actorName,
 }: {
   groupCode: string;
   members: Member[];
   currency: string;
   trigger: React.ReactElement;
   initial?: ExpenseInitial;
+  /** Nombre de quien hace la acción, para el registro de actividad. */
+  actorName?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -192,6 +195,7 @@ export function ExpenseSheet({
         percent: null,
         fixedAmount: null,
       })),
+      actorName,
     };
 
     setSaving(true);
@@ -474,7 +478,7 @@ export function ExpenseSheet({
                     onClick={async () => {
                       setSaving(true);
                       try {
-                        await deleteExpense({ id: initial.id, groupCode });
+                        await deleteExpense({ id: initial.id, groupCode, actorName });
                         toast.success("Gasto eliminado");
                         setOpen(false);
                         router.refresh();

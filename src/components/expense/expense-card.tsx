@@ -27,6 +27,7 @@ export function ExpenseCard({
 }) {
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? "?";
   const payerNames = expense.payers.map((p) => nameOf(p.memberId)).join(", ");
+  const meName = me ? members.find((m) => m.id === me)?.name : undefined;
   const { day, mon } = formatDayMon(expense.expenseDate);
 
   const myPaid = expense.payers
@@ -127,6 +128,7 @@ export function ExpenseCard({
         members={activeMembers}
         currency={currency}
         initial={initial}
+        actorName={meName}
         trigger={<button className="w-full">{row}</button>}
       />
     </li>

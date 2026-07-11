@@ -1,9 +1,10 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { groups, members, expensePayers, expenseShares } from "@/db/schema";
+import { logActivity } from "@/db/activity";
 import { newId } from "@/lib/ids";
 import { revalidatePath } from "next/cache";
 
@@ -26,6 +27,8 @@ const addSchema = z.object({
   isAdmin: z.boolean().optional(),
   /** Si quien lo agrega ES esta persona (se suma a sí misma al unirse). */
   claimed: z.boolean().optional(),
+  /** Token del dispositivo que ocupa el lugar (cuando claimed=true). */
+  deviceId: z.string().optional(),
 });
 
 export async function addMember(input: z.input<typeof addSchema>) {
@@ -42,23 +45,34 @@ export async function addMember(input: z.input<typeof addSchema>) {
     active: true,
     isAdmin: data.isAdmin ?? false,
     claimed: data.claimed ?? false,
+    claimedBy: data.claimed ? data.deviceId || null : null,
     createdAt: new Date().toISOString(),
   });
+  if (data.claimed) {
+    await logActivity(groupId, "member_join", data.name, "se sumó al grupo");
+  }
   revalidatePath(`/g/${data.groupCode}/miembros`);
   revalidatePath(`/g/${data.groupCode}`);
   return { id };
 }
 
 /**
- * Ocupar un lugar (miembro) al entrar como esa persona. Atómico: si otro
+ * Ocupar un lugar LIBRE al entrar como esa persona. Atómico: si otro
  * dispositivo lo tomó primero, falla (no se puede entrar dos veces al mismo).
  */
-export async function claimMember(input: { code: string; memberId: string }) {
+export async function claimMember(input: {
+  code: string;
+  memberId: string;
+  deviceId: string;
+}) {
   const rows = await db
     .update(members)
-    .set({ claimed: true })
+    .set({ claimed: true, claimedBy: input.deviceId })
     .where(and(eq(members.id, input.memberId), eq(members.claimed, false)))
-    .returning({ id: members.id });
+    .returning({
+      name: members.name,
+      groupId: members.groupId,
+    });
 
   revalidatePath(`/g/${input.code}`);
 
@@ -71,6 +85,45 @@ export async function claimMember(input: { code: string; memberId: string }) {
     // Existe pero ya estaba tomado, o no existe.
     return { ok: false as const, alreadyClaimed: !!m };
   }
+  await logActivity(rows[0].groupId, "member_claim", rows[0].name, "reclamó su lugar");
+  return { ok: true as const };
+}
+
+/**
+ * "Soy yo pero desde otro dispositivo": ocupa un lugar YA tomado y expulsa al
+ * anterior (su claimedBy deja de coincidir y queda afuera en su próxima carga).
+ */
+export async function switchDeviceClaim(input: {
+  code: string;
+  memberId: string;
+  deviceId: string;
+}) {
+  const rows = await db
+    .update(members)
+    .set({ claimed: true, claimedBy: input.deviceId })
+    .where(eq(members.id, input.memberId))
+    .returning({ name: members.name, groupId: members.groupId });
+
+  if (rows.length === 0) return { ok: false as const };
+  revalidatePath(`/g/${input.code}`);
+  await logActivity(
+    rows[0].groupId,
+    "member_switch",
+    rows[0].name,
+    "ingresó desde otro dispositivo"
+  );
+  return { ok: true as const, name: rows[0].name };
+}
+
+/**
+ * Migración blanda: un dispositivo que ya "era" este miembro (de antes del
+ * sistema de lugares) adopta el lugar si todavía no tiene dueño. Sin log.
+ */
+export async function adoptClaim(input: { memberId: string; deviceId: string }) {
+  await db
+    .update(members)
+    .set({ claimed: true, claimedBy: input.deviceId })
+    .where(and(eq(members.id, input.memberId), isNull(members.claimedBy)));
   return { ok: true as const };
 }
 

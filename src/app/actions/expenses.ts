@@ -9,7 +9,9 @@ import {
   expensePayers,
   expenseShares,
 } from "@/db/schema";
+import { logActivity } from "@/db/activity";
 import { newId } from "@/lib/ids";
+import { formatMoney } from "@/lib/money";
 import { computeShares, validateSplit, type ShareInput } from "@/lib/split";
 import { revalidatePath } from "next/cache";
 
@@ -34,6 +36,8 @@ const expenseSchema = z.object({
   splitType: z.enum(["equal", "custom_amount", "percent", "units"]),
   payers: z.array(payerSchema).min(1, "Elegí al menos un pagador."),
   participants: z.array(participantSchema).min(1, "Elegí participantes."),
+  /** Quién hace la acción (para el registro de actividad). */
+  actorName: z.string().trim().max(60).optional(),
 });
 
 export type ExpenseInput = z.input<typeof expenseSchema>;
@@ -51,27 +55,29 @@ function assertConsistent(data: z.infer<typeof expenseSchema>) {
   if (!v.ok) throw new Error(v.message ?? "División inválida.");
 }
 
-async function getGroupIdOrThrow(code: string): Promise<string> {
+async function getGroupOrThrow(
+  code: string
+): Promise<{ id: string; currency: string }> {
   const [g] = await db
-    .select()
+    .select({ id: groups.id, currency: groups.currency })
     .from(groups)
     .where(eq(groups.code, code))
     .limit(1);
   if (!g) throw new Error("Grupo no encontrado.");
-  return g.id;
+  return g;
 }
 
 export async function createExpense(input: ExpenseInput) {
   const data = expenseSchema.parse(input);
   assertConsistent(data);
-  const groupId = await getGroupIdOrThrow(data.groupCode);
+  const group = await getGroupOrThrow(data.groupCode);
 
   const expenseId = newId();
   const now = new Date().toISOString();
 
   await db.insert(expenses).values({
     id: expenseId,
-    groupId,
+    groupId: group.id,
     amount: data.amount,
     concept: data.concept,
     expenseDate: data.expenseDate ?? now.slice(0, 10),
@@ -81,6 +87,12 @@ export async function createExpense(input: ExpenseInput) {
   });
 
   await insertPayersAndShares(expenseId, data);
+  await logActivity(
+    group.id,
+    "expense_add",
+    data.actorName ?? null,
+    `agregó "${data.concept}" (${formatMoney(data.amount, group.currency)})`
+  );
   revalidateGroup(data.groupCode);
   return { id: expenseId };
 }
@@ -89,6 +101,7 @@ export async function updateExpense(input: ExpenseInput & { id: string }) {
   const { id, ...rest } = input;
   const data = expenseSchema.parse(rest);
   assertConsistent(data);
+  const group = await getGroupOrThrow(data.groupCode);
 
   await db
     .update(expenses)
@@ -106,6 +119,12 @@ export async function updateExpense(input: ExpenseInput & { id: string }) {
   await db.delete(expenseShares).where(eq(expenseShares.expenseId, id));
   await insertPayersAndShares(id, data);
 
+  await logActivity(
+    group.id,
+    "expense_edit",
+    data.actorName ?? null,
+    `editó "${data.concept}"`
+  );
   revalidateGroup(data.groupCode);
   return { id };
 }
@@ -113,8 +132,22 @@ export async function updateExpense(input: ExpenseInput & { id: string }) {
 export async function deleteExpense(input: {
   id: string;
   groupCode: string;
+  actorName?: string;
 }) {
+  const [e] = await db
+    .select({ concept: expenses.concept, groupId: expenses.groupId })
+    .from(expenses)
+    .where(eq(expenses.id, input.id))
+    .limit(1);
   await db.delete(expenses).where(eq(expenses.id, input.id));
+  if (e) {
+    await logActivity(
+      e.groupId,
+      "expense_delete",
+      input.actorName?.trim() || null,
+      `eliminó "${e.concept}"`
+    );
+  }
   revalidateGroup(input.groupCode);
   return { ok: true };
 }
