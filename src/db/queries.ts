@@ -25,11 +25,19 @@ import { normalizeCode } from "@/lib/ids";
 
 export const getGroupByCode = cache(
   async (code: string): Promise<Group | undefined> => {
-    const rows = await db
-      .select()
-      .from(groups)
-      .where(eq(groups.code, normalizeCode(code)))
-      .limit(1);
+    const normalized = normalizeCode(code);
+    const run = () =>
+      db.select().from(groups).where(eq(groups.code, normalized)).limit(1);
+
+    let rows = await run();
+    // Reintento anti-404: cuando la base free recién despierta, una lectura
+    // inmediatamente después de crear el grupo puede volver vacía por un
+    // instante. Antes de rendirnos (notFound), reintentamos una vez para no
+    // tirar un 404 duro sobre un grupo que SÍ existe.
+    if (rows.length === 0) {
+      await new Promise((r) => setTimeout(r, 300));
+      rows = await run();
+    }
     return rows[0];
   }
 );
