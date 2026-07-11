@@ -1,0 +1,1 @@
+ALTER TABLE "members" ADD COLUMN "claimed" boolean DEFAULT false NOT NULL;

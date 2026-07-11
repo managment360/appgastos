@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { groups, members, expensePayers, expenseShares } from "@/db/schema";
@@ -24,6 +24,8 @@ const addSchema = z.object({
   email: z.string().trim().max(120).optional(),
   aliasCbu: z.string().trim().max(120).optional(),
   isAdmin: z.boolean().optional(),
+  /** Si quien lo agrega ES esta persona (se suma a sí misma al unirse). */
+  claimed: z.boolean().optional(),
 });
 
 export async function addMember(input: z.input<typeof addSchema>) {
@@ -39,10 +41,37 @@ export async function addMember(input: z.input<typeof addSchema>) {
     aliasCbu: data.aliasCbu || null,
     active: true,
     isAdmin: data.isAdmin ?? false,
+    claimed: data.claimed ?? false,
     createdAt: new Date().toISOString(),
   });
   revalidatePath(`/g/${data.groupCode}/miembros`);
+  revalidatePath(`/g/${data.groupCode}`);
   return { id };
+}
+
+/**
+ * Ocupar un lugar (miembro) al entrar como esa persona. Atómico: si otro
+ * dispositivo lo tomó primero, falla (no se puede entrar dos veces al mismo).
+ */
+export async function claimMember(input: { code: string; memberId: string }) {
+  const rows = await db
+    .update(members)
+    .set({ claimed: true })
+    .where(and(eq(members.id, input.memberId), eq(members.claimed, false)))
+    .returning({ id: members.id });
+
+  revalidatePath(`/g/${input.code}`);
+
+  if (rows.length === 0) {
+    const [m] = await db
+      .select({ id: members.id })
+      .from(members)
+      .where(eq(members.id, input.memberId))
+      .limit(1);
+    // Existe pero ya estaba tomado, o no existe.
+    return { ok: false as const, alreadyClaimed: !!m };
+  }
+  return { ok: true as const };
 }
 
 export async function setMemberAdmin(input: {

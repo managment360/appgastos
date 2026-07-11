@@ -116,11 +116,14 @@ export async function createGroup(input: CreateGroupInput) {
       email: data.creator.email || null,
       active: true,
       isAdmin: true,
+      claimed: true, // el creador ya ocupa su lugar
       createdAt: now,
     });
   }
 
-  // Resto de miembros: evito duplicar al creador si lo tipearon de nuevo.
+  // Resto de miembros: son INTEGRANTES (solo el creador es admin) y arrancan
+  // con su lugar libre (claimed=false) hasta que esa persona entre. Evito
+  // duplicar al creador si lo tipearon de nuevo.
   const creatorName = data.creator?.name.trim().toLowerCase();
   for (const m of data.members) {
     if (creatorName && m.name.trim().toLowerCase() === creatorName) continue;
@@ -129,7 +132,7 @@ export async function createGroup(input: CreateGroupInput) {
       groupId,
       name: m.name,
       active: true,
-      isAdmin: m.isAdmin ?? false,
+      isAdmin: false,
       createdAt: now,
     });
   }

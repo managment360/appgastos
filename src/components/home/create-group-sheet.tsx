@@ -19,7 +19,7 @@ import { createGroup } from "@/app/actions/groups";
 import { rememberGroup } from "@/lib/recent-groups";
 import { setCurrentMember } from "@/lib/current-member";
 import { useProfile } from "@/lib/profile";
-import { cn, scrollIntoCenter } from "@/lib/utils";
+import { scrollIntoCenter } from "@/lib/utils";
 import { fileToResizedDataUrl } from "@/lib/image";
 
 type Step = "form" | "confirm-empty" | "confirm-ready";
@@ -79,12 +79,6 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
     }
     setMemberList((prev) => [...prev, { name: n, isAdmin: false }]);
     setMemberInput("");
-  }
-
-  function toggleAdmin(name: string) {
-    setMemberList((prev) =>
-      prev.map((m) => (m.name === name ? { ...m, isAdmin: !m.isAdmin } : m))
-    );
   }
 
   function onCreatePressed() {
@@ -253,9 +247,9 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              La <span className="text-[var(--color-gold)]">⭐</span> marca
-              administrador. Si no marcás ninguno, todos pueden editar. Se genera
-              un código para compartir.
+              Vos sos el <span className="text-[var(--color-gold)]">admin</span>{" "}
+              del grupo. El resto entra como integrante cuando abre el link y
+              elige su lugar. Se genera un código para compartir.
             </p>
 
             {(profile || memberList.length > 0) && (
@@ -272,20 +266,6 @@ export function CreateGroupSheet({ trigger }: { trigger: ReactElement }) {
                     key={m.name}
                     className="flex items-center gap-1.5 rounded-full bg-muted py-1 pl-3 pr-1.5 text-sm"
                   >
-                    <button
-                      type="button"
-                      onClick={() => toggleAdmin(m.name)}
-                      title="Marcar como administrador"
-                    >
-                      <Star
-                        className={cn(
-                          "size-4",
-                          m.isAdmin
-                            ? "fill-[var(--color-gold)] text-[var(--color-gold)]"
-                            : "text-muted-foreground"
-                        )}
-                      />
-                    </button>
                     {m.name}
                     <button
                       type="button"

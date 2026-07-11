@@ -51,9 +51,10 @@ export function useCurrentMember(code: string): string | null {
 }
 
 /**
- * ¿Puede editar este dispositivo?
- *  - Si nadie es admin -> todos pueden (grupo abierto).
- *  - Si hay admins -> solo si "quién sos" es admin.
+ * ¿Puede editar (cargar/editar gastos, liquidar, gestionar miembros)?
+ * Solo el/los admin. Los integrantes ven pero no cargan.
+ *  - Grupos viejos sin ningún admin -> todos pueden (no quedan trabados).
+ *  - Grupos nuevos -> solo si "quién sos" es admin.
  */
 export function useCanEdit(code: string, members: Member[]): boolean {
   const me = useCurrentMember(code);

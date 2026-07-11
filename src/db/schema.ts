@@ -44,6 +44,12 @@ export const members = pgTable("members", {
   active: boolean("active").notNull().default(true),
   /** Administrador del grupo (puede editar). Sin login: rol "blando". */
   isAdmin: boolean("is_admin").notNull().default(false),
+  /**
+   * Lugar "tomado": true cuando alguien ya entró como este miembro desde su
+   * dispositivo. Se muestra en gris/bloqueado en "¿Quién sos?" para que dos
+   * personas no ocupen el mismo miembro. Estado COMPARTIDO (servidor).
+   */
+  claimed: boolean("claimed").notNull().default(false),
   createdAt: text("created_at").notNull(),
 });
 
